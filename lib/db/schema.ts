@@ -83,6 +83,11 @@ export const tenants = pgTable('tenants', {
   name: varchar('name', { length: 200 }).notNull().unique(),
   status: varchar('status', { length: 20 }).notNull().default('active'),
   defaultTimezone: varchar('default_timezone', { length: 64 }).notNull().default('Asia/Dhaka'),
+  stripeCustomerId: varchar('stripe_customer_id', { length: 255 }),
+  stripeSubscriptionId: varchar('stripe_subscription_id', { length: 255 }),
+  stripeProductId: varchar('stripe_product_id', { length: 255 }),
+  planName: varchar('plan_name', { length: 100 }),
+  subscriptionStatus: varchar('subscription_status', { length: 50 }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -172,6 +177,20 @@ export const obligationInstances = pgTable('obligation_instances', {
   notes: text('notes'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// Obligation Documents
+export const obligationDocuments = pgTable('obligation_documents', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  obligationInstanceId: uuid('obligation_instance_id')
+    .notNull()
+    .references(() => obligationInstances.id, { onDelete: 'cascade' }),
+  storageKey: varchar('storage_key', { length: 500 }).notNull(),
+  filename: varchar('filename', { length: 255 }).notNull(),
+  mimeType: varchar('mime_type', { length: 120 }).notNull(),
+  sizeBytes: integer('size_bytes').notNull(),
+  uploadedByUserId: integer('uploaded_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
 // Domains for SSL monitoring
@@ -475,6 +494,9 @@ export type NewObligationTemplate = typeof obligationTemplates.$inferInsert;
 
 export type ObligationInstance = typeof obligationInstances.$inferSelect;
 export type NewObligationInstance = typeof obligationInstances.$inferInsert;
+
+export type ObligationDocument = typeof obligationDocuments.$inferSelect;
+export type NewObligationDocument = typeof obligationDocuments.$inferInsert;
 
 export type Domain = typeof domains.$inferSelect;
 export type NewDomain = typeof domains.$inferInsert;

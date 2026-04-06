@@ -9,6 +9,12 @@ import {
   UserMinus,
   Mail,
   CheckCircle,
+  Building2,
+  GitBranch,
+  FileCheck,
+  Globe,
+  Bell,
+  Shield,
   type LucideIcon,
 } from 'lucide-react';
 import { ActivityType } from '@/lib/db/schema';
@@ -21,10 +27,19 @@ const iconMap: Record<ActivityType, LucideIcon> = {
   [ActivityType.UPDATE_PASSWORD]: Lock,
   [ActivityType.DELETE_ACCOUNT]: UserMinus,
   [ActivityType.UPDATE_ACCOUNT]: Settings,
-  [ActivityType.CREATE_TEAM]: UserPlus,
-  [ActivityType.REMOVE_TEAM_MEMBER]: UserMinus,
-  [ActivityType.INVITE_TEAM_MEMBER]: Mail,
-  [ActivityType.ACCEPT_INVITATION]: CheckCircle,
+  [ActivityType.CREATE_TENANT]: Building2,
+  [ActivityType.CREATE_BRANCH]: GitBranch,
+  [ActivityType.UPDATE_BRANCH]: GitBranch,
+  [ActivityType.DELETE_BRANCH]: GitBranch,
+  [ActivityType.CREATE_OBLIGATION]: FileCheck,
+  [ActivityType.UPDATE_OBLIGATION]: FileCheck,
+  [ActivityType.COMPLETE_OBLIGATION]: CheckCircle,
+  [ActivityType.CREATE_DOMAIN]: Globe,
+  [ActivityType.DELETE_DOMAIN]: Globe,
+  [ActivityType.CREATE_CONNECTOR]: Shield,
+  [ActivityType.UPDATE_CONNECTOR]: Shield,
+  [ActivityType.SEND_NOTIFICATION]: Bell,
+  [ActivityType.ACKNOWLEDGE_NOTIFICATION]: Bell,
 };
 
 function getRelativeTime(date: Date) {
@@ -55,14 +70,32 @@ function formatAction(action: ActivityType): string {
       return 'You deleted your account';
     case ActivityType.UPDATE_ACCOUNT:
       return 'You updated your account';
-    case ActivityType.CREATE_TEAM:
-      return 'You created a new team';
-    case ActivityType.REMOVE_TEAM_MEMBER:
-      return 'You removed a team member';
-    case ActivityType.INVITE_TEAM_MEMBER:
-      return 'You invited a team member';
-    case ActivityType.ACCEPT_INVITATION:
-      return 'You accepted an invitation';
+    case ActivityType.CREATE_TENANT:
+      return 'You created a new tenant';
+    case ActivityType.CREATE_BRANCH:
+      return 'You created a new branch';
+    case ActivityType.UPDATE_BRANCH:
+      return 'You updated a branch';
+    case ActivityType.DELETE_BRANCH:
+      return 'You deleted a branch';
+    case ActivityType.CREATE_OBLIGATION:
+      return 'You created an obligation';
+    case ActivityType.UPDATE_OBLIGATION:
+      return 'You updated an obligation';
+    case ActivityType.COMPLETE_OBLIGATION:
+      return 'You completed an obligation';
+    case ActivityType.CREATE_DOMAIN:
+      return 'You added a domain';
+    case ActivityType.DELETE_DOMAIN:
+      return 'You removed a domain';
+    case ActivityType.CREATE_CONNECTOR:
+      return 'You created a connector';
+    case ActivityType.UPDATE_CONNECTOR:
+      return 'You updated a connector';
+    case ActivityType.SEND_NOTIFICATION:
+      return 'You sent a notification';
+    case ActivityType.ACKNOWLEDGE_NOTIFICATION:
+      return 'You acknowledged a notification';
     default:
       return 'Unknown action occurred';
   }

@@ -1,4 +1,4 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
+import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from './schema';
 import dotenv from 'dotenv';
@@ -9,5 +9,17 @@ if (!process.env.POSTGRES_URL) {
   throw new Error('POSTGRES_URL environment variable is not set');
 }
 
-export const client = postgres(process.env.POSTGRES_URL);
-export const db = drizzle(client, { schema });
+declare global {
+  var db: PostgresJsDatabase<typeof schema> | undefined;
+  var dbClient: ReturnType<typeof postgres> | undefined;
+}
+
+const globalForDb = globalThis;
+
+export const client = globalForDb.dbClient ?? postgres(process.env.POSTGRES_URL, { max: 10, idle_timeout: 20, connect_timeout: 10 });
+export const db = globalForDb.db ?? drizzle(client, { schema });
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForDb.dbClient = client;
+  globalForDb.db = db;
+}

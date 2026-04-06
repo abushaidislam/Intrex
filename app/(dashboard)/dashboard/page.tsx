@@ -7,64 +7,268 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { customerPortalAction } from '@/lib/payments/actions';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { AlertCircle, Building2, CheckCircle2, Clock, FileText, AlertTriangle } from 'lucide-react';
 import useSWR from 'swr';
-import { Suspense } from 'react';
+import Link from 'next/link';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-function SubscriptionSkeleton() {
-  return (
-    <Card className="mb-8 h-[140px]">
-      <CardHeader>
-        <CardTitle>Team Subscription</CardTitle>
-      </CardHeader>
-    </Card>
-  );
+interface DashboardData {
+  summary: {
+    totalBranches: number;
+    activeObligations: number;
+    upcomingCount: number;
+    overdueCount: number;
+    dueTodayCount: number;
+    completedThisMonth: number;
+  };
+  upcoming: Array<{
+    obligation: {
+      id: string;
+      title: string;
+      category: string;
+      status: string;
+      severity: string;
+      dueAt: string;
+    };
+    branch: {
+      name: string;
+    } | null;
+  }>;
+  overdue: Array<{
+    obligation: {
+      id: string;
+      title: string;
+      category: string;
+      status: string;
+      severity: string;
+      dueAt: string;
+    };
+    branch: {
+      name: string;
+    } | null;
+  }>;
 }
 
-function ManageSubscription() {
-  const { data: teamData } = useSWR('/api/team', fetcher);
+const categoryLabels: Record<string, string> = {
+  trade_license: 'Trade License',
+  fire_safety: 'Fire Safety',
+  tax_vat: 'Tax/VAT',
+  environmental_permit: 'Environmental Permit',
+  inspection_renewal: 'Inspection Renewal',
+};
 
+const statusColors: Record<string, string> = {
+  upcoming: 'bg-blue-500',
+  due_today: 'bg-yellow-500',
+  overdue: 'bg-red-500',
+  completed: 'bg-green-500',
+  waived: 'bg-gray-500',
+};
+
+function SummaryCard({
+  title,
+  value,
+  icon: Icon,
+  color,
+  link,
+}: {
+  title: string;
+  value: number;
+  icon: React.ElementType;
+  color: string;
+  link: string;
+}) {
   return (
-    <Card className="mb-8">
-      <CardHeader>
-        <CardTitle>Team Subscription</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-            <div className="mb-4 sm:mb-0">
-              <p className="font-medium">
-                Current Plan: {teamData?.planName || 'Free'}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {teamData?.subscriptionStatus === 'active'
-                  ? 'Billed monthly'
-                  : teamData?.subscriptionStatus === 'trialing'
-                  ? 'Trial period'
-                  : 'No active subscription'}
-              </p>
+    <Link href={link}>
+      <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">{title}</p>
+              <p className="text-3xl font-bold mt-2">{value}</p>
             </div>
-            <form action={customerPortalAction}>
-              <Button type="submit" variant="outline">
-                Manage Subscription
-              </Button>
-            </form>
+            <div className={`p-3 rounded-full ${color}`}>
+              <Icon className="w-6 h-6 text-white" />
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
 
-export default function SettingsPage() {
+export default function DashboardPage() {
+  const { data: dashboardData, error } = useSWR<DashboardData>(
+    '/api/dashboard/summary',
+    fetcher
+  );
+
+  const formatDueDate = (dueAt: string) => {
+    const date = new Date(dueAt);
+    const now = new Date();
+    const diffDays = Math.ceil(
+      (date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Tomorrow';
+    if (diffDays < 0) return `${Math.abs(diffDays)} days overdue`;
+    return `${diffDays} days left`;
+  };
+
   return (
     <section className="flex-1 p-4 lg:p-8">
-      <h1 className="text-lg lg:text-2xl font-medium mb-6">Team Settings</h1>
-      <Suspense fallback={<SubscriptionSkeleton />}>
-        <ManageSubscription />
-      </Suspense>
+      <h1 className="text-lg lg:text-2xl font-medium mb-6">Dashboard</h1>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <SummaryCard
+          title="Total Branches"
+          value={dashboardData?.summary.totalBranches || 0}
+          icon={Building2}
+          color="bg-blue-500"
+          link="/branches"
+        />
+        <SummaryCard
+          title="Overdue"
+          value={dashboardData?.summary.overdueCount || 0}
+          icon={AlertCircle}
+          color="bg-red-500"
+          link="/obligations?status=overdue"
+        />
+        <SummaryCard
+          title="Due Today"
+          value={dashboardData?.summary.dueTodayCount || 0}
+          icon={Clock}
+          color="bg-yellow-500"
+          link="/obligations?status=due_today"
+        />
+        <SummaryCard
+          title="Completed This Month"
+          value={dashboardData?.summary.completedThisMonth || 0}
+          icon={CheckCircle2}
+          color="bg-green-500"
+          link="/obligations?status=completed"
+        />
+      </div>
+
+      {/* Quick Actions */}
+      <div className="flex gap-4 mb-8">
+        <Link href="/obligations">
+          <Button variant="outline">
+            <FileText className="w-4 h-4 mr-2" />
+            View All Obligations
+          </Button>
+        </Link>
+        <Link href="/branches">
+          <Button variant="outline">
+            <Building2 className="w-4 h-4 mr-2" />
+            Manage Branches
+          </Button>
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Upcoming Obligations */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="w-5 h-5" />
+              Upcoming (Next 7 Days)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Branch</TableHead>
+                  <TableHead>Due</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {dashboardData?.upcoming?.slice(0, 5).map(({ obligation, branch }) => (
+                  <TableRow key={obligation.id}>
+                    <TableCell className="font-medium">
+                      <Link href={`/obligations`} className="hover:underline">
+                        {obligation.title}
+                      </Link>
+                    </TableCell>
+                    <TableCell>{branch?.name || '-'}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {formatDueDate(obligation.dueAt)}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {!dashboardData?.upcoming?.length && (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-muted-foreground">
+                      No upcoming obligations
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* Overdue Obligations */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="w-5 h-5" />
+              Overdue Items
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Branch</TableHead>
+                  <TableHead>Due Date</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {dashboardData?.overdue?.slice(0, 5).map(({ obligation, branch }) => (
+                  <TableRow key={obligation.id}>
+                    <TableCell className="font-medium">
+                      <Link href={`/obligations`} className="hover:underline text-red-600">
+                        {obligation.title}
+                      </Link>
+                    </TableCell>
+                    <TableCell>{branch?.name || '-'}</TableCell>
+                    <TableCell>
+                      <Badge variant="destructive">
+                        {new Date(obligation.dueAt).toLocaleDateString()}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {!dashboardData?.overdue?.length && (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-muted-foreground">
+                      No overdue obligations
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
     </section>
   );
 }

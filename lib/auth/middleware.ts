@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { TeamDataWithMembers, User } from '@/lib/db/schema';
+import { Tenant, User } from '@/lib/db/schema';
 import { getTeamForUser, getUser } from '@/lib/db/queries';
 import { redirect } from 'next/navigation';
 
@@ -53,23 +53,23 @@ export function validatedActionWithUser<S extends z.ZodType<any, any>, T>(
   };
 }
 
-type ActionWithTeamFunction<T> = (
+type ActionWithTenantFunction<T> = (
   formData: FormData,
-  team: TeamDataWithMembers
+  tenant: Tenant
 ) => Promise<T>;
 
-export function withTeam<T>(action: ActionWithTeamFunction<T>) {
+export function withTenant<T>(action: ActionWithTenantFunction<T>) {
   return async (formData: FormData): Promise<T> => {
     const user = await getUser();
     if (!user) {
       redirect('/sign-in');
     }
 
-    const team = await getTeamForUser();
-    if (!team) {
-      throw new Error('Team not found');
+    const tenant = await getTeamForUser();
+    if (!tenant) {
+      throw new Error('Tenant not found');
     }
 
-    return action(formData, team);
+    return action(formData, tenant);
   };
 }
