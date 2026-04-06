@@ -309,6 +309,20 @@ export const acknowledgements = pgTable('acknowledgements', {
   ackAt: timestamp('ack_at').notNull().defaultNow(),
 });
 
+// SSL Notification Recipients (simplified - just email addresses)
+export const sslNotificationRecipients = pgTable('ssl_notification_recipients', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id')
+    .notNull()
+    .references(() => tenants.id, { onDelete: 'cascade' }),
+  email: varchar('email', { length: 255 }).notNull(),
+  name: varchar('name', { length: 100 }),
+  notifyBeforeDays: integer('notify_before_days').notNull().default(30), // How many days before expiry to notify
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 // Activity Logs (modified)
 export const activityLogs = pgTable('activity_logs', {
   id: serial('id').primaryKey(),
@@ -476,6 +490,14 @@ export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
   }),
 }));
 
+// SSL Notification Recipients Relations
+export const sslNotificationRecipientsRelations = relations(sslNotificationRecipients, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [sslNotificationRecipients.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
 // Types
 export type Tenant = typeof tenants.$inferSelect;
 export type NewTenant = typeof tenants.$inferInsert;
@@ -521,6 +543,9 @@ export type NewAcknowledgement = typeof acknowledgements.$inferInsert;
 
 export type ActivityLog = typeof activityLogs.$inferSelect;
 export type NewActivityLog = typeof activityLogs.$inferInsert;
+
+export type SSLNotificationRecipient = typeof sslNotificationRecipients.$inferSelect;
+export type NewSSLNotificationRecipient = typeof sslNotificationRecipients.$inferInsert;
 
 export enum ActivityType {
   SIGN_UP = 'SIGN_UP',

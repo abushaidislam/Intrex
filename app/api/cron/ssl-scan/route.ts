@@ -2,6 +2,10 @@ import { db } from '@/lib/db/drizzle';
 import { domains, sslCheckResults } from '@/lib/db/schema';
 import { eq, and, lte } from 'drizzle-orm';
 import { checkSSLCertificate } from '@/lib/ssl/checker';
+import { createSSLExpiryNotifications } from '@/lib/notifications/ssl-notifications';
+
+export const dynamic = 'force-dynamic';
+export const maxDuration = 300;
 
 type SslCheckStatus = 'ok' | 'warning' | 'expired' | 'handshake_failed' | 'dns_failed' | 'timeout' | 'hostname_mismatch';
 
@@ -143,9 +147,14 @@ export async function GET(request: Request) {
 
     console.log(`[SSL Cron] Completed ${results.length} SSL checks`);
 
+    // Create notifications for SSL expiry alerts
+    const notificationResult = await createSSLExpiryNotifications();
+    console.log(`[SSL Cron] Created ${notificationResult.created} SSL expiry notifications`);
+
     return Response.json({
       success: true,
       checked: results.length,
+      notificationsCreated: notificationResult.created,
       results,
       timestamp: now.toISOString(),
     });
