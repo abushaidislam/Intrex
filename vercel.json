@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/recurrence",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/ssl-scan",
+      "schedule": "0 */12 * * *"
+    }
+  ]
+}

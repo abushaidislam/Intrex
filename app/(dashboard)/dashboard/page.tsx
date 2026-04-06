@@ -16,7 +16,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, Building2, CheckCircle2, Clock, FileText, AlertTriangle } from 'lucide-react';
+import { AlertCircle, Building2, CheckCircle2, Clock, FileText, AlertTriangle, Shield, Globe, ShieldAlert, ShieldCheck } from 'lucide-react';
 import useSWR from 'swr';
 import Link from 'next/link';
 
@@ -30,6 +30,10 @@ interface DashboardData {
     overdueCount: number;
     dueTodayCount: number;
     completedThisMonth: number;
+    totalDomains: number;
+    sslHealthy: number;
+    sslExpiringSoon: number;
+    sslIssues: number;
   };
   upcoming: Array<{
     obligation: {
@@ -55,6 +59,18 @@ interface DashboardData {
     };
     branch: {
       name: string;
+    } | null;
+  }>;
+  sslExpiring: Array<{
+    domain: {
+      id: string;
+      hostname: string;
+      port: number;
+    };
+    result: {
+      checkStatus: string;
+      daysRemaining: number | null;
+      validTo: string | null;
     } | null;
   }>;
 }
@@ -154,16 +170,16 @@ export default function DashboardPage() {
           link="/obligations?status=due_today"
         />
         <SummaryCard
-          title="Completed This Month"
-          value={dashboardData?.summary.completedThisMonth || 0}
-          icon={CheckCircle2}
-          color="bg-green-500"
-          link="/obligations?status=completed"
+          title="SSL Domains"
+          value={dashboardData?.summary.totalDomains || 0}
+          icon={Shield}
+          color="bg-purple-500"
+          link="/domains"
         />
       </div>
 
       {/* Quick Actions */}
-      <div className="flex gap-4 mb-8">
+      <div className="flex gap-4 mb-8 flex-wrap">
         <Link href="/obligations">
           <Button variant="outline">
             <FileText className="w-4 h-4 mr-2" />
@@ -174,6 +190,12 @@ export default function DashboardPage() {
           <Button variant="outline">
             <Building2 className="w-4 h-4 mr-2" />
             Manage Branches
+          </Button>
+        </Link>
+        <Link href="/domains">
+          <Button variant="outline">
+            <Globe className="w-4 h-4 mr-2" />
+            SSL Monitoring
           </Button>
         </Link>
       </div>
@@ -224,43 +246,58 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Overdue Obligations */}
+        {/* SSL Expiring Soon */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-600">
-              <AlertTriangle className="w-5 h-5" />
-              Overdue Items
+            <CardTitle className="flex items-center gap-2 text-yellow-600">
+              <ShieldAlert className="w-5 h-5" />
+              SSL Certificates at Risk
             </CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Branch</TableHead>
-                  <TableHead>Due Date</TableHead>
+                  <TableHead>Domain</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Expires</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {dashboardData?.overdue?.slice(0, 5).map(({ obligation, branch }) => (
-                  <TableRow key={obligation.id}>
+                {dashboardData?.sslExpiring?.slice(0, 5).map(({ domain, result }) => (
+                  <TableRow key={domain.id}>
                     <TableCell className="font-medium">
-                      <Link href={`/obligations`} className="hover:underline text-red-600">
-                        {obligation.title}
+                      <Link href={`/domains/${domain.id}`} className="hover:underline text-yellow-600">
+                        {domain.hostname}
+                        {domain.port !== 443 && <span className="text-muted-foreground">:{domain.port}</span>}
                       </Link>
                     </TableCell>
-                    <TableCell>{branch?.name || '-'}</TableCell>
                     <TableCell>
-                      <Badge variant="destructive">
-                        {new Date(obligation.dueAt).toLocaleDateString()}
+                      <Badge className={result?.checkStatus === 'expired' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}>
+                        {result?.checkStatus === 'expired' ? 'Expired' : 'Expiring Soon'}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {result?.daysRemaining !== null && result?.daysRemaining !== undefined ? (
+                        result.daysRemaining < 0 ? (
+                          <span className="text-red-600 font-medium">
+                            {Math.abs(result.daysRemaining)} days ago
+                          </span>
+                        ) : (
+                          <span className={result.daysRemaining <= 7 ? 'text-red-600 font-medium' : ''}>
+                            {result.daysRemaining} days
+                          </span>
+                        )
+                      ) : (
+                        '-'
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
-                {!dashboardData?.overdue?.length && (
+                {!dashboardData?.sslExpiring?.length && (
                   <TableRow>
                     <TableCell colSpan={3} className="text-center text-muted-foreground">
-                      No overdue obligations
+                      No SSL certificate risks
                     </TableCell>
                   </TableRow>
                 )}
@@ -269,6 +306,51 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Overdue Obligations */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-red-600">
+            <AlertTriangle className="w-5 h-5" />
+            Overdue Items
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Title</TableHead>
+                <TableHead>Branch</TableHead>
+                <TableHead>Due Date</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {dashboardData?.overdue?.slice(0, 5).map(({ obligation, branch }) => (
+                <TableRow key={obligation.id}>
+                  <TableCell className="font-medium">
+                    <Link href={`/obligations`} className="hover:underline text-red-600">
+                      {obligation.title}
+                    </Link>
+                  </TableCell>
+                  <TableCell>{branch?.name || '-'}</TableCell>
+                  <TableCell>
+                    <Badge variant="destructive">
+                      {new Date(obligation.dueAt).toLocaleDateString()}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {!dashboardData?.overdue?.length && (
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center text-muted-foreground">
+                    No overdue obligations
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </section>
   );
 }

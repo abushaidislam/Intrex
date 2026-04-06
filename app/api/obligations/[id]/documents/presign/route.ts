@@ -17,21 +17,26 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const user = await getUser();
-  if (!user) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  try {
+    const user = await getUser();
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-  const { id } = await params;
-  const body = await request.json();
-  const validated = presignSchema.safeParse(body);
+    if (!user.tenantId) {
+      return Response.json({ error: 'User not associated with a tenant' }, { status: 403 });
+    }
 
-  if (!validated.success) {
-    return Response.json(
-      { error: 'Validation failed', issues: validated.error.issues },
-      { status: 400 }
-    );
-  }
+    const { id } = await params;
+    const body = await request.json();
+    const validated = presignSchema.safeParse(body);
+
+    if (!validated.success) {
+      return Response.json(
+        { error: 'Validation failed', issues: validated.error.issues },
+        { status: 400 }
+      );
+    }
 
   // Verify obligation exists and belongs to user's tenant
   const obligation = await db
@@ -88,6 +93,13 @@ export async function POST(
     // Or in production with Supabase:
     // uploadUrl: await supabase.storage.from('documents').createSignedUploadUrl(storageKey),
   });
+  } catch (error) {
+    console.error('Presign error:', error);
+    return Response.json({ 
+      error: 'Failed to generate upload URL',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
+  }
 }
 
 export async function GET(

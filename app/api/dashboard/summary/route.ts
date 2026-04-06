@@ -1,7 +1,7 @@
 import { db } from '@/lib/db/drizzle';
-import { obligationInstances, branches, activityLogs } from '@/lib/db/schema';
+import { obligationInstances, branches, activityLogs, domains, sslCheckResults } from '@/lib/db/schema';
 import { getUser } from '@/lib/db/queries';
-import { eq, and, lte, gte, count, sql, desc } from 'drizzle-orm';
+import { eq, and, lte, gte, count, sql, desc, inArray } from 'drizzle-orm';
 
 export async function GET() {
   const user = await getUser();
@@ -62,6 +62,71 @@ export async function GET() {
         )
       );
 
+    // Get SSL summary
+    const [totalDomains] = await db
+      .select({ count: count() })
+      .from(domains)
+      .where(
+        and(
+          eq(domains.tenantId, tenantId),
+          eq(domains.status, 'active')
+        )
+      );
+
+    // Get domains with expiring/expired certificates
+    const expiringSoon = await db
+      .select({
+        domain: domains,
+        result: sslCheckResults,
+      })
+      .from(domains)
+      .leftJoin(
+        sslCheckResults,
+        eq(sslCheckResults.domainId, domains.id)
+      )
+      .where(
+        and(
+          eq(domains.tenantId, tenantId),
+          eq(domains.status, 'active'),
+          inArray(sslCheckResults.checkStatus, ['warning', 'expired'])
+        )
+      )
+      .orderBy(desc(sslCheckResults.checkedAt));
+
+    // Count by status
+    const [sslOkCount] = await db
+      .select({ count: count() })
+      .from(sslCheckResults)
+      .innerJoin(domains, eq(domains.id, sslCheckResults.domainId))
+      .where(
+        and(
+          eq(domains.tenantId, tenantId),
+          eq(sslCheckResults.checkStatus, 'ok')
+        )
+      );
+
+    const [sslWarningCount] = await db
+      .select({ count: count() })
+      .from(sslCheckResults)
+      .innerJoin(domains, eq(domains.id, sslCheckResults.domainId))
+      .where(
+        and(
+          eq(domains.tenantId, tenantId),
+          eq(sslCheckResults.checkStatus, 'warning')
+        )
+      );
+
+    const [sslExpiredCount] = await db
+      .select({ count: count() })
+      .from(sslCheckResults)
+      .innerJoin(domains, eq(domains.id, sslCheckResults.domainId))
+      .where(
+        and(
+          eq(domains.tenantId, tenantId),
+          inArray(sslCheckResults.checkStatus, ['expired', 'handshake_failed', 'dns_failed', 'hostname_mismatch'])
+        )
+      );
+
     // Get upcoming obligations (next 7 days)
     const upcoming = await db
       .select({
@@ -106,9 +171,15 @@ export async function GET() {
         overdueCount: overdueCount?.count || 0,
         dueTodayCount: dueTodayCount?.count || 0,
         completedThisMonth: completedThisMonth?.count || 0,
+        // SSL Summary
+        totalDomains: totalDomains?.count || 0,
+        sslHealthy: sslOkCount?.count || 0,
+        sslExpiringSoon: sslWarningCount?.count || 0,
+        sslIssues: sslExpiredCount?.count || 0,
       },
       upcoming,
       overdue,
+      sslExpiring: expiringSoon.slice(0, 5),
     });
   } catch (error) {
     console.error('Dashboard summary error:', error);

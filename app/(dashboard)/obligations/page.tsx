@@ -21,11 +21,19 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Pencil, Trash2, Plus, CheckCircle, XCircle, Calendar } from 'lucide-react';
+import { Pencil, Trash2, Plus, CheckCircle, XCircle, Calendar, FileText, Upload, Filter } from 'lucide-react';
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+interface Document {
+  id: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: string;
+}
 
 interface Obligation {
   obligation: {
@@ -311,8 +319,10 @@ async function deleteObligationWrapper(_url: string, { arg: targetUrl }: { arg: 
 }
 
 export default function ObligationsPage() {
+  const [selectedBranchId, setSelectedBranchId] = useState<string>('');
+
   const { data: obligations, mutate } = useSWR<Obligation[]>(
-    '/api/obligations',
+    `/api/obligations${selectedBranchId ? `?branchId=${selectedBranchId}` : ''}`,
     fetcher
   );
   const { data: branches } = useSWR<Branch[]>('/api/branches', fetcher);
@@ -324,6 +334,9 @@ export default function ObligationsPage() {
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [waivingId, setWaivingId] = useState<string | null>(null);
   const [waiveReason, setWaiveReason] = useState('');
+  const [viewingDocsId, setViewingDocsId] = useState<string | null>(null);
+  const [uploadingDocId, setUploadingDocId] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const { trigger: createTrigger } = useSWRMutation(
     '/api/obligations',
@@ -364,10 +377,96 @@ export default function ObligationsPage() {
     deleteObligationWrapper
   );
 
+  const { data: documents } = useSWR<Document[]>(
+    viewingDocsId ? `/api/obligations/${viewingDocsId}/documents/presign` : null,
+    fetcher
+  );
+
+  const { trigger: uploadTrigger, error: uploadError } = useSWRMutation(
+    uploadingDocId ? `/api/obligations/${uploadingDocId}/documents/presign` : null,
+    async (url: string, { arg }: { arg: { filename: string; mimeType: string; sizeBytes: number } }) => {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(arg),
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.details || `Failed to get upload URL (${res.status})`);
+      }
+      return res.json();
+    },
+    {
+      onSuccess: (data) => {
+        // After getting presign URL, upload the file
+        if (data.uploadUrl && selectedFile) {
+          uploadFileToUrl(data.uploadUrl, selectedFile);
+        }
+      },
+      onError: (err) => {
+        console.error('Upload error:', err);
+      }
+    }
+  );
+
+  const handleFileUpload = async () => {
+    if (!selectedFile || !uploadingDocId) return;
+    
+    await uploadTrigger({
+      filename: selectedFile.name,
+      mimeType: selectedFile.type,
+      sizeBytes: selectedFile.size,
+    });
+  };
+
+  const handleDeleteDocument = async (obligationId: string, docId: string) => {
+    if (!confirm('Are you sure you want to delete this document?')) return;
+    const res = await fetch(`/api/obligations/${obligationId}/documents/${docId}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('Failed to delete document');
+    // SWR will revalidate
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure?')) return;
     await deleteTrigger(`/api/obligations/${id}`);
     mutate();
+  };
+
+  // Upload file to the presigned URL
+  const uploadFileToUrl = async (uploadUrl: string, file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch(uploadUrl, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.details || `Upload failed (${res.status})`);
+      }
+
+      // Success - close dialog and refresh
+      setUploadingDocId(null);
+      setSelectedFile(null);
+      // Refresh documents list if viewing
+      if (viewingDocsId) {
+        mutate();
+      }
+    } catch (err) {
+      console.error('Upload file error:', err);
+      throw err;
+    }
   };
 
   const isOverdue = (dueAt: string) => new Date(dueAt) < new Date();
@@ -376,25 +475,43 @@ export default function ObligationsPage() {
     <section className="flex-1 p-4 lg:p-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-lg lg:text-2xl font-medium">Compliance Obligations</h1>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Obligation
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Create New Obligation</DialogTitle>
-            </DialogHeader>
-            <ObligationForm
-              branches={branches || []}
-              templates={templates || []}
-              onSubmit={createTrigger}
-              onCancel={() => setIsCreateOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-4">
+          {/* Branch Filter */}
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-muted-foreground" />
+            <select
+              value={selectedBranchId}
+              onChange={(e) => setSelectedBranchId(e.target.value)}
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="">All Branches</option>
+              {branches?.map((branch) => (
+                <option key={branch.id} value={branch.id}>
+                  {branch.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Obligation
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Create New Obligation</DialogTitle>
+              </DialogHeader>
+              <ObligationForm
+                branches={branches || []}
+                templates={templates || []}
+                onSubmit={createTrigger}
+                onCancel={() => setIsCreateOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <Card>
@@ -450,6 +567,20 @@ export default function ObligationsPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setViewingDocsId(obligation.id)}
+                    >
+                      <FileText className="w-4 h-4 text-blue-500" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setUploadingDocId(obligation.id)}
+                    >
+                      <Upload className="w-4 h-4 text-purple-500" />
+                    </Button>
                     {obligation.status !== 'completed' &&
                       obligation.status !== 'waived' && (
                         <>
@@ -544,6 +675,91 @@ export default function ObligationsPage() {
                 disabled={!waiveReason.trim()}
               >
                 Waive
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Documents Dialog */}
+      <Dialog open={!!viewingDocsId} onOpenChange={() => setViewingDocsId(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Documents</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+            {documents?.length === 0 && (
+              <p className="text-muted-foreground text-center py-4">No documents uploaded yet.</p>
+            )}
+            {documents?.map((doc) => (
+              <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{doc.filename}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatFileSize(doc.sizeBytes)} • {new Date(doc.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+                <div className="flex gap-2 ml-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => window.open(`/api/obligations/${viewingDocsId}/documents/${doc.id}/download`, '_blank')}
+                  >
+                    <FileText className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteDocument(viewingDocsId!, doc.id)}
+                  >
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload Document Dialog */}
+      <Dialog open={!!uploadingDocId} onOpenChange={() => { setUploadingDocId(null); setSelectedFile(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upload Document</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {uploadError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+                {uploadError.message}
+              </div>
+            )}
+            <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+              <input
+                type="file"
+                id="file-upload"
+                className="hidden"
+                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+              />
+              <label htmlFor="file-upload" className="cursor-pointer">
+                <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                <p className="text-sm font-medium">
+                  {selectedFile ? selectedFile.name : 'Click to select file'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  PDF, DOC, DOCX, JPG, PNG up to 10MB
+                </p>
+              </label>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => { setUploadingDocId(null); setSelectedFile(null); }}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleFileUpload}
+                disabled={!selectedFile}
+              >
+                Upload
               </Button>
             </div>
           </div>

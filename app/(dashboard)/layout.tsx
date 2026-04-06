@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
-import { CircleIcon, Home, LogOut, Building2, ClipboardCheck, LayoutDashboard, Shield, Activity, Menu } from 'lucide-react';
+import { CircleIcon, Home, LogOut, Building2, ClipboardCheck, LayoutDashboard, Shield, Activity, Menu, Globe } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -104,6 +104,7 @@ function Sidebar() {
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { href: '/branches', icon: Building2, label: 'Branches' },
     { href: '/obligations', icon: ClipboardCheck, label: 'Obligations' },
+    { href: '/domains', icon: Globe, label: 'SSL Domains' },
     { href: '/dashboard/activity', icon: Activity, label: 'Activity' },
     { href: '/dashboard/security', icon: Shield, label: 'Security' }
   ];
