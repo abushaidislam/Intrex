@@ -145,6 +145,17 @@ CREATE TABLE IF NOT EXISTS "obligation_templates" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "obligation_documents" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"obligation_instance_id" uuid NOT NULL,
+	"storage_key" varchar(500) NOT NULL,
+	"filename" varchar(255) NOT NULL,
+	"mime_type" varchar(120) NOT NULL,
+	"size_bytes" integer NOT NULL,
+	"uploaded_by_user_id" integer,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "ssl_check_results" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"domain_id" uuid NOT NULL,
@@ -216,6 +227,8 @@ DO $$ BEGIN ALTER TABLE "obligation_instances" ADD CONSTRAINT "obligation_instan
 DO $$ BEGIN ALTER TABLE "obligation_instances" ADD CONSTRAINT "obligation_instances_branch_id_branches_id_fk" FOREIGN KEY ("branch_id") REFERENCES "public"."branches"("id") ON DELETE cascade ON UPDATE no action; EXCEPTION WHEN duplicate_object THEN null; END $$;--> statement-breakpoint
 DO $$ BEGIN ALTER TABLE "obligation_instances" ADD CONSTRAINT "obligation_instances_template_id_obligation_templates_id_fk" FOREIGN KEY ("template_id") REFERENCES "public"."obligation_templates"("id") ON DELETE set null ON UPDATE no action; EXCEPTION WHEN duplicate_object THEN null; END $$;--> statement-breakpoint
 DO $$ BEGIN ALTER TABLE "obligation_instances" ADD CONSTRAINT "obligation_instances_owner_user_id_users_id_fk" FOREIGN KEY ("owner_user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action; EXCEPTION WHEN duplicate_object THEN null; END $$;--> statement-breakpoint
+DO $$ BEGIN ALTER TABLE "obligation_documents" ADD CONSTRAINT "obligation_documents_obligation_instance_id_fk" FOREIGN KEY ("obligation_instance_id") REFERENCES "public"."obligation_instances"("id") ON DELETE cascade ON UPDATE no action; EXCEPTION WHEN duplicate_object THEN null; END $$;--> statement-breakpoint
+DO $$ BEGIN ALTER TABLE "obligation_documents" ADD CONSTRAINT "obligation_documents_uploaded_by_user_id_fk" FOREIGN KEY ("uploaded_by_user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action; EXCEPTION WHEN duplicate_object THEN null; END $$;--> statement-breakpoint
 DO $$ BEGIN ALTER TABLE "obligation_templates" ADD CONSTRAINT "obligation_templates_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action; EXCEPTION WHEN duplicate_object THEN null; END $$;--> statement-breakpoint
 DO $$ BEGIN ALTER TABLE "obligation_templates" ADD CONSTRAINT "obligation_templates_jurisdiction_id_jurisdictions_id_fk" FOREIGN KEY ("jurisdiction_id") REFERENCES "public"."jurisdictions"("id") ON DELETE set null ON UPDATE no action; EXCEPTION WHEN duplicate_object THEN null; END $$;--> statement-breakpoint
 DO $$ BEGIN ALTER TABLE "ssl_check_results" ADD CONSTRAINT "ssl_check_results_domain_id_domains_id_fk" FOREIGN KEY ("domain_id") REFERENCES "public"."domains"("id") ON DELETE cascade ON UPDATE no action; EXCEPTION WHEN duplicate_object THEN null; END $$;--> statement-breakpoint

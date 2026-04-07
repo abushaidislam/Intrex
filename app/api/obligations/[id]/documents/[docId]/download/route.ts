@@ -2,6 +2,7 @@ import { db } from '@/lib/db/drizzle';
 import { obligationDocuments, obligationInstances } from '@/lib/db/schema';
 import { getUser } from '@/lib/db/queries';
 import { eq, and } from 'drizzle-orm';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export async function GET(
   request: Request,
@@ -45,16 +46,19 @@ export async function GET(
     return Response.json({ error: 'Document not found' }, { status: 404 });
   }
 
-  // In production: Stream file from Supabase Storage or S3
-  // For MVP: Return document metadata indicating this would be the download
-  // The actual file would be served from storage in production
-  
-  // Redirect to the actual storage URL or serve the file
-  // For now, return a response indicating download would happen here
-  return Response.json({
-    message: 'Download endpoint - in production this would serve the file',
-    document: document[0],
-    // In production with Supabase:
-    // downloadUrl: await supabase.storage.from('documents').createSignedUrl(document[0].storageKey, 60),
-  });
+  // Generate signed URL for download from Supabase Storage
+  const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin.storage
+    .from('documents')
+    .createSignedUrl(document[0].storageKey, 60); // 60 seconds expiry
+
+  if (signedUrlError) {
+    console.error('Supabase signed URL error:', signedUrlError);
+    return Response.json({ 
+      error: 'Failed to generate download URL',
+      details: signedUrlError.message 
+    }, { status: 500 });
+  }
+
+  // Redirect to the signed URL
+  return Response.redirect(signedUrlData.signedUrl);
 }

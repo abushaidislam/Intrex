@@ -156,6 +156,17 @@ CREATE POLICY "ack_tenant_select" ON public.acknowledgements
 CREATE POLICY "logs_tenant_select" ON public.activity_logs
   FOR SELECT USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
 
+CREATE POLICY "logs_tenant_insert" ON public.activity_logs
+  FOR INSERT WITH CHECK (tenant_id = current_setting('app.current_tenant_id')::uuid);
+
+-- Service role bypass for API operations (used when RLS context not set)
+CREATE OR REPLACE FUNCTION public.check_service_role() RETURNS BOOLEAN AS $$
+BEGIN
+  -- Check if current user is postgres/service role (bypass RLS)
+  RETURN (current_user = 'postgres' OR current_user LIKE 'supabase%');
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Jurisdictions: Read-only for all (system data)
 CREATE POLICY "jurisdictions_select" ON public.jurisdictions
   FOR SELECT USING (true);

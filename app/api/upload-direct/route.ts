@@ -11,10 +11,20 @@ import { join } from 'path';
 // Uploads a file directly to local storage (MVP)
 // In production: Use Supabase Storage, S3, or similar
 
+// Set RLS context for the current user/tenant
+async function setRLSContext(userId: number, tenantId: string) {
+  await db.execute(`SET app.current_user_id = '${userId}'`);
+  await db.execute(`SET app.current_tenant_id = '${tenantId}'`);
+}
+
 export async function POST(request: Request) {
   const user = await getUser();
   if (!user) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  if (!user.tenantId) {
+    return Response.json({ error: 'User not associated with a tenant' }, { status: 403 });
   }
 
   const { searchParams } = new URL(request.url);
@@ -25,6 +35,9 @@ export async function POST(request: Request) {
   }
 
   try {
+    // Set RLS context before database operations
+    await setRLSContext(user.id, user.tenantId);
+
     // Get form data with file
     const formData = await request.formData();
     const file = formData.get('file') as File | null;

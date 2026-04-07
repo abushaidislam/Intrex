@@ -440,20 +440,21 @@ export default function ObligationsPage() {
     mutate();
   };
 
-  // Upload file to the presigned URL
+  // Upload file to Supabase Storage using signed URL
   const uploadFileToUrl = async (uploadUrl: string, file: File) => {
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-
+      // Supabase Storage signed URL expects the file as binary body
       const res = await fetch(uploadUrl, {
-        method: 'POST',
-        body: formData,
+        method: 'PUT',
+        headers: {
+          'Content-Type': file.type,
+        },
+        body: file,
       });
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || errorData.details || `Upload failed (${res.status})`);
+        const errorData = await res.text().catch(() => 'Upload failed');
+        throw new Error(errorData || `Upload failed (${res.status})`);
       }
 
       // Success - close dialog and refresh

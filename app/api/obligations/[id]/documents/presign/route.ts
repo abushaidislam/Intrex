@@ -3,15 +3,19 @@ import { obligationDocuments, obligationInstances, activityLogs } from '@/lib/db
 import { getUser } from '@/lib/db/queries';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
-
-// Note: In production, integrate with Supabase Storage or S3 for actual file storage
-// This is a presigned URL generator mock for the MVP
+import { supabaseAdmin } from '@/lib/supabase';
 
 const presignSchema = z.object({
   filename: z.string().min(1),
   mimeType: z.string().min(1),
   sizeBytes: z.number().positive(),
 });
+
+// Set RLS context for the current user/tenant
+async function setRLSContext(userId: number, tenantId: string) {
+  await db.execute(`SET app.current_user_id = '${userId}'`);
+  await db.execute(`SET app.current_tenant_id = '${tenantId}'`);
+}
 
 export async function POST(
   request: Request,
@@ -38,66 +42,78 @@ export async function POST(
       );
     }
 
-  // Verify obligation exists and belongs to user's tenant
-  const obligation = await db
-    .select()
-    .from(obligationInstances)
-    .where(
-      and(
-        eq(obligationInstances.id, id),
-        eq(obligationInstances.tenantId, user.tenantId!)
+    // Set RLS context before database operations
+    await setRLSContext(user.id, user.tenantId);
+
+    // Verify obligation exists and belongs to user's tenant
+    const obligation = await db
+      .select()
+      .from(obligationInstances)
+      .where(
+        and(
+          eq(obligationInstances.id, id),
+          eq(obligationInstances.tenantId, user.tenantId!)
+        )
       )
-    )
-    .limit(1);
+      .limit(1);
 
-  if (obligation.length === 0) {
-    return Response.json({ error: 'Obligation not found' }, { status: 404 });
-  }
+    if (obligation.length === 0) {
+      return Response.json({ error: 'Obligation not found' }, { status: 404 });
+    }
 
-  const { filename, mimeType, sizeBytes } = validated.data;
+    const { filename, mimeType, sizeBytes } = validated.data;
 
-  // Generate storage key
-  const storageKey = `tenants/${user.tenantId}/obligations/${id}/${Date.now()}_${filename}`;
+    // Generate storage key
+    const storageKey = `tenants/${user.tenantId}/obligations/${id}/${Date.now()}_${filename}`;
 
-  // In production: Generate presigned URL from Supabase Storage or S3
-  // For MVP: Return mock presigned URL and save document record
+    // Create document record in database
+    const [document] = await db
+      .insert(obligationDocuments)
+      .values({
+        obligationInstanceId: id,
+        storageKey,
+        filename,
+        mimeType,
+        sizeBytes,
+        uploadedByUserId: user.id,
+      })
+      .returning();
 
-  // Create document record
-  const [document] = await db
-    .insert(obligationDocuments)
-    .values({
-      obligationInstanceId: id,
-      storageKey,
-      filename,
-      mimeType,
-      sizeBytes,
-      uploadedByUserId: user.id,
-    })
-    .returning();
+    // Log activity
+    await db.insert(activityLogs).values({
+      tenantId: user.tenantId!,
+      userId: user.id,
+      action: 'UPLOAD_DOCUMENT',
+      entityType: 'obligation_document',
+      entityId: document.id,
+      afterJson: { obligationId: id, filename, sizeBytes },
+    });
 
-  // Log activity
-  await db.insert(activityLogs).values({
-    tenantId: user.tenantId!,
-    userId: user.id,
-    action: 'UPLOAD_DOCUMENT',
-    entityType: 'obligation_document',
-    entityId: document.id,
-    afterJson: { obligationId: id, filename, sizeBytes },
-  });
+    // Generate signed URL from Supabase Storage
+    const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin.storage
+      .from('documents')
+      .createSignedUploadUrl(storageKey);
 
-  // Return presigned URL info
-  // In production, this would be a real presigned URL from your storage provider
-  return Response.json({
-    document,
-    uploadUrl: `/api/upload-direct?key=${encodeURIComponent(storageKey)}`,
-    // Or in production with Supabase:
-    // uploadUrl: await supabase.storage.from('documents').createSignedUploadUrl(storageKey),
-  });
+    if (signedUrlError) {
+      console.error('Supabase signed URL error:', signedUrlError);
+      return Response.json({ 
+        error: 'Failed to generate upload URL',
+        details: signedUrlError.message
+      }, { status: 500 });
+    }
+
+    return Response.json({
+      document,
+      uploadUrl: signedUrlData.signedUrl,
+      token: signedUrlData.token,
+    });
   } catch (error) {
-    console.error('Presign error:', error);
+    console.error('Presign error details:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
     return Response.json({ 
       error: 'Failed to generate upload URL',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: error instanceof Error ? error.message : 'Unknown error',
+      code: (error as any)?.code || 'UNKNOWN'
     }, { status: 500 });
   }
 }
