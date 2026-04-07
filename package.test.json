@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "test:phase5": "vitest run lib/notifications/phase5.test.ts"
+  }
+}
