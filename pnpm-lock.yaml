@@ -102,6 +102,9 @@ importers:
       '@playwright/test':
         specifier: ^1.59.1
         version: 1.59.1
+      baseline-browser-mapping:
+        specifier: ^2.10.16
+        version: 2.10.16
       tsx:
         specifier: ^4.21.0
         version: 4.21.0
@@ -1660,6 +1663,11 @@ packages:
     hasBin: true
     peerDependencies:
       postcss: ^8.1.0
+
+  baseline-browser-mapping@2.10.16:
+    resolution: {integrity: sha512-Lyf3aK28zpsD1yQMiiHD4RvVb6UdMoo8xzG2XzFIfR9luPzOpcBlAsT/qfB1XWS1bxWT+UtE4WmQgsp297FYOA==}
+    engines: {node: '>=6.0.0'}
+    hasBin: true
 
   bcryptjs@3.0.2:
     resolution: {integrity: sha512-k38b3XOZKv60C4E2hVsXTolJWfkGRMbILBIe2IBITXciy5bOsTKot5kDrf3ZfufQtQOUN5mXceUEpU1rTl9Uog==}
@@ -3633,6 +3641,8 @@ snapshots:
       picocolors: 1.1.1
       postcss: 8.5.3
       postcss-value-parser: 4.2.0
+
+  baseline-browser-mapping@2.10.16: {}
 
   bcryptjs@3.0.2: {}
 

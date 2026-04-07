@@ -23,6 +23,7 @@ import {
   validatedAction,
   validatedActionWithUser
 } from '@/lib/auth/middleware';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 async function logActivity(
   tenantId: string | null | undefined,
@@ -49,6 +50,17 @@ const signInSchema = z.object({
 
 export const signIn = validatedAction(signInSchema, async (data, formData) => {
   const { email, password } = data;
+
+  // Rate limiting check by email
+  const rateLimitKey = `signin:${email.toLowerCase()}`;
+  const rateLimit = await checkRateLimit(rateLimitKey);
+  if (!rateLimit.allowed) {
+    return {
+      error: 'Too many login attempts. Please try again later.',
+      email,
+      password
+    };
+  }
 
   const userWithTenant = await db
     .select({
@@ -105,6 +117,17 @@ const signUpSchema = z.object({
 
 export const signUp = validatedAction(signUpSchema, async (data, formData) => {
   const { email, password } = data;
+
+  // Rate limiting check by email
+  const rateLimitKey = `signup:${email.toLowerCase()}`;
+  const rateLimit = await checkRateLimit(rateLimitKey);
+  if (!rateLimit.allowed) {
+    return {
+      error: 'Too many signup attempts. Please try again later.',
+      email,
+      password
+    };
+  }
 
   const existingUser = await db
     .select()

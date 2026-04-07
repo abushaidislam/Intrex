@@ -1,4 +1,4 @@
-import { db } from '@/lib/db/drizzle';
+import { db, client } from '@/lib/db/drizzle';
 import { obligationDocuments, activityLogs } from '@/lib/db/schema';
 import { getUser } from '@/lib/db/queries';
 import { eq, and } from 'drizzle-orm';
@@ -13,8 +13,9 @@ import { join } from 'path';
 
 // Set RLS context for the current user/tenant
 async function setRLSContext(userId: number, tenantId: string) {
-  await db.execute(`SET app.current_user_id = '${userId}'`);
-  await db.execute(`SET app.current_tenant_id = '${tenantId}'`);
+  // Use parameterized queries to prevent SQL injection
+  await client`SELECT set_config('app.current_user_id', ${userId.toString()}, true)`;
+  await client`SELECT set_config('app.current_tenant_id', ${tenantId}, true)`;
 }
 
 export async function POST(request: Request) {
@@ -55,18 +56,35 @@ export async function POST(request: Request) {
     // Parse storage key to create subdirectory structure
     // storageKey format: tenants/{tenantId}/obligations/{obligationId}/{timestamp}_{filename}
     const keyParts = storageKey.split('/');
-    const tenantId = keyParts[1];
+    
+    if (keyParts.length < 5 || keyParts[0] !== 'tenants' || keyParts[2] !== 'obligations') {
+      return Response.json({ error: 'Invalid storage key format' }, { status: 400 });
+    }
+    
+    const extractedTenantId = keyParts[1];
     const obligationId = keyParts[3];
+    
+    // SECURITY: Validate extracted tenantId matches authenticated user's tenant
+    if (extractedTenantId !== user.tenantId) {
+      return Response.json({ error: 'Unauthorized tenant access' }, { status: 403 });
+    }
 
     // Create tenant/obligation subdirectory
-    const fileDir = join(uploadDir, 'tenants', tenantId, 'obligations', obligationId);
+    const fileDir = join(uploadDir, 'tenants', extractedTenantId, 'obligations', obligationId);
     if (!existsSync(fileDir)) {
       await mkdir(fileDir, { recursive: true });
     }
 
-    // Extract filename from storage key
-    const filename = keyParts[keyParts.length - 1];
-    const filePath = join(fileDir, filename);
+    // Extract and sanitize filename from storage key to prevent path traversal
+    const rawFilename = keyParts[keyParts.length - 1];
+    // Remove path traversal attempts and sanitize
+    const sanitizedFilename = rawFilename.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/_{2,}/g, '_');
+    
+    if (!sanitizedFilename || sanitizedFilename === '_' || sanitizedFilename === '.') {
+      return Response.json({ error: 'Invalid filename' }, { status: 400 });
+    }
+    
+    const filePath = join(fileDir, sanitizedFilename);
 
     // Convert file to buffer and save
     const arrayBuffer = await file.arrayBuffer();

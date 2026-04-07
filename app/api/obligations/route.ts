@@ -11,9 +11,9 @@ const obligationSchema = z.object({
   title: z.string().min(1).max(200),
   ownerUserId: z.number().optional(),
   severity: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
-  dueAt: z.string(), // datetime-local format: "2024-01-15T14:30"
-  graceDays: z.number().default(0),
-  notes: z.string().optional(),
+  dueAt: z.coerce.date(), // Proper date validation and coercion
+  graceDays: z.number().int().min(0).max(365).default(0),
+  notes: z.string().max(5000).optional(),
 });
 
 export async function GET(request: Request) {

@@ -31,8 +31,13 @@ export async function GET(request: Request) {
   const status = searchParams.get('status');
   const branchId = searchParams.get('branchId');
 
+  // SECURITY: Ensure user has a tenant before proceeding
+  if (!user.tenantId) {
+    return Response.json({ error: 'User not associated with a tenant' }, { status: 403 });
+  }
+
   const conditions: any[] = [
-    eq(domains.tenantId, user.tenantId!)
+    eq(domains.tenantId, user.tenantId)
   ];
 
   if (status) {
@@ -63,6 +68,11 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // SECURITY: Ensure user has a tenant before proceeding
+  if (!user.tenantId) {
+    return Response.json({ error: 'User not associated with a tenant' }, { status: 403 });
+  }
+
   const body = await request.json();
   const validated = domainSchema.safeParse(body);
 
@@ -82,7 +92,7 @@ export async function POST(request: Request) {
       .where(
         and(
           eq(branches.id, validated.data.branchId),
-          eq(branches.tenantId, user.tenantId!)
+          eq(branches.tenantId, user.tenantId)
         )
       )
       .limit(1);
@@ -98,7 +108,7 @@ export async function POST(request: Request) {
     .from(domains)
     .where(
       and(
-        eq(domains.tenantId, user.tenantId!),
+        eq(domains.tenantId, user.tenantId),
         eq(domains.hostname, validated.data.hostname),
         eq(domains.port, validated.data.port)
       )
@@ -118,7 +128,7 @@ export async function POST(request: Request) {
   const [newDomain] = await db
     .insert(domains)
     .values({
-      tenantId: user.tenantId!,
+      tenantId: user.tenantId,
       branchId: validated.data.branchId || null,
       hostname: validated.data.hostname,
       port: validated.data.port,

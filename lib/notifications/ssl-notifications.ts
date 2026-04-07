@@ -17,6 +17,20 @@ const SSL_EXPIRY_THRESHOLDS = [
   { days: 1, severity: 'critical' as const },
 ];
 
+/**
+ * Escape HTML special characters to prevent XSS
+ */
+function escapeHtml(text: string): string {
+  const htmlEntities: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  };
+  return text.replace(/[&<>"']/g, (char) => htmlEntities[char] || char);
+}
+
 export interface SSLExpiryNotification {
   domainId: string;
   hostname: string;
@@ -328,6 +342,10 @@ async function sendSSLExpiryEmail(
       ? `🔴 SSL Certificate EXPIRED for ${hostname}`
       : `⚠️ SSL Certificate Expiring in ${daysRemaining} days - ${hostname}`;
 
+    // Escape user-controlled values for HTML safety
+    const safeHostname = escapeHtml(hostname);
+    const safeIssuerCn = issuerCn ? escapeHtml(issuerCn) : null;
+
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: ${severityColors[severity as keyof typeof severityColors]}; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
@@ -335,13 +353,13 @@ async function sendSSLExpiryEmail(
         </div>
         <div style="background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
           <p style="font-size: 16px; margin-bottom: 20px;">
-            Your SSL certificate for <strong>${hostname}</strong> requires attention.
+            Your SSL certificate for <strong>${safeHostname}</strong> requires attention.
           </p>
           
           <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
             <tr style="background: white;">
               <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">Domain</td>
-              <td style="padding: 12px; border: 1px solid #e5e7eb;">${hostname}</td>
+              <td style="padding: 12px; border: 1px solid #e5e7eb;">${safeHostname}</td>
             </tr>
             <tr style="background: #f3f4f6;">
               <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">Status</td>
@@ -356,10 +374,10 @@ async function sendSSLExpiryEmail(
               <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">Expiry Date</td>
               <td style="padding: 12px; border: 1px solid #e5e7eb;">${new Date(validTo).toLocaleString()}</td>
             </tr>
-            ${issuerCn ? `
+            ${safeIssuerCn ? `
             <tr style="background: #f3f4f6;">
               <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">Issuer</td>
-              <td style="padding: 12px; border: 1px solid #e5e7eb;">${issuerCn}</td>
+              <td style="padding: 12px; border: 1px solid #e5e7eb;">${safeIssuerCn}</td>
             </tr>
             ` : ''}
           </table>
@@ -367,7 +385,7 @@ async function sendSSLExpiryEmail(
           <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 20px;">
             <h3 style="margin-top: 0; color: #374151;">Action Required</h3>
             <p style="margin-bottom: 0; color: #6b7280;">
-              Please renew your SSL certificate for <strong>${hostname}</strong> to avoid service disruption.
+              Please renew your SSL certificate for <strong>${safeHostname}</strong> to avoid service disruption.
               Contact your SSL certificate provider to initiate the renewal process.
             </p>
           </div>

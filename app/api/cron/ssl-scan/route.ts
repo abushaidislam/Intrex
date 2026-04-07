@@ -4,10 +4,155 @@ import { eq, and, lte } from 'drizzle-orm';
 import { checkSSLCertificate } from '@/lib/ssl/checker';
 import { createSSLExpiryNotifications } from '@/lib/notifications/ssl-notifications';
 
+// Concurrency limit for SSL checks to prevent overwhelming the event loop
+const CONCURRENCY_LIMIT = 10;
+
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
 type SslCheckStatus = 'ok' | 'warning' | 'expired' | 'handshake_failed' | 'dns_failed' | 'timeout' | 'hostname_mismatch';
+
+/**
+ * Process an array of items with a concurrency limit using worker pool pattern
+ * This prevents overwhelming the event loop while still processing in parallel
+ */
+async function processWithConcurrencyLimit<T, R>(
+  items: T[],
+  limit: number,
+  processor: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = [];
+  let index = 0;
+
+  async function processNext(): Promise<void> {
+    const currentIndex = index++;
+    if (currentIndex >= items.length) return;
+    
+    const result = await processor(items[currentIndex]);
+    results.push(result);
+    await processNext();
+  }
+
+  const workers = Array(Math.min(limit, items.length))
+    .fill(null)
+    .map(() => processNext());
+
+  await Promise.all(workers);
+  return results;
+}
+
+/**
+ * Check a single domain and save the result
+ */
+async function checkSingleDomain(
+  domain: typeof domains.$inferSelect,
+  now: Date
+): Promise<{
+  domainId: string;
+  hostname: string;
+  status: string;
+  error?: string;
+}> {
+  try {
+    // Perform SSL check
+    const checkResult = await checkSSLCertificate({
+      hostname: domain.hostname,
+      port: domain.port,
+      sniHostname: domain.sniHostname || undefined,
+      timeout: 30000,
+    });
+
+    // Determine check status
+    let checkStatus: SslCheckStatus = 'ok';
+    let daysRemaining: number | null = null;
+
+    if (checkResult.error) {
+      if (checkResult.error.includes('DNS') || checkResult.error.includes('ENOTFOUND')) {
+        checkStatus = 'dns_failed';
+      } else if (checkResult.error.includes('timeout') || checkResult.error.includes('ETIMEDOUT')) {
+        checkStatus = 'timeout';
+      } else {
+        checkStatus = 'handshake_failed';
+      }
+    } else if (checkResult.certificate) {
+      const validTo = new Date(checkResult.certificate.validTo);
+      daysRemaining = Math.floor((validTo.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (daysRemaining < 0) {
+        checkStatus = 'expired';
+      } else if (daysRemaining <= 30) {
+        checkStatus = 'warning';
+      }
+
+      // Check hostname mismatch
+      if (checkResult.certificate.san && checkResult.certificate.san.length > 0) {
+        const hostname = domain.hostname;
+        const san = checkResult.certificate.san;
+        const cn = checkResult.certificate.subjectCN;
+        
+        const hostnameMatch = san.some((s: string) => {
+          if (s.startsWith('*.')) {
+            const domain = s.slice(2);
+            return hostname === domain || hostname.endsWith('.' + domain);
+          }
+          return s === hostname;
+        }) || cn === hostname;
+
+        if (!hostnameMatch) {
+          checkStatus = 'hostname_mismatch';
+        }
+      }
+    }
+
+    // Save result
+    await db.insert(sslCheckResults).values({
+      domainId: domain.id,
+      checkStatus,
+      validFrom: checkResult.certificate?.validFrom ? new Date(checkResult.certificate.validFrom) : null,
+      validTo: checkResult.certificate?.validTo ? new Date(checkResult.certificate.validTo) : null,
+      issuerCn: checkResult.certificate?.issuerCN || null,
+      subjectCn: checkResult.certificate?.subjectCN || null,
+      sanJson: checkResult.certificate?.san ? JSON.stringify(checkResult.certificate.san) : null,
+      daysRemaining,
+      fingerprintSha256: checkResult.certificate?.fingerprint || null,
+      errorMessage: checkResult.error || null,
+      rawJson: checkResult.raw || null,
+    });
+
+    // Update domain with last/next check times
+    const nextCheckAt = new Date(now.getTime() + 12 * 60 * 60 * 1000); // 12 hours
+    await db
+      .update(domains)
+      .set({
+        lastCheckedAt: now,
+        nextCheckAt,
+      })
+      .where(eq(domains.id, domain.id));
+
+    return {
+      domainId: domain.id,
+      hostname: domain.hostname,
+      status: checkStatus,
+    };
+
+  } catch (error) {
+    console.error(`[SSL Cron] Error checking ${domain.hostname}:`, error);
+    
+    // Save failure result
+    await db.insert(sslCheckResults).values({
+      domainId: domain.id,
+      checkStatus: 'handshake_failed',
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+    });
+
+    return {
+      domainId: domain.id,
+      hostname: domain.hostname,
+      status: 'error',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
 
 // GET /api/cron/ssl-scan - Run SSL checks for domains due for checking
 // This endpoint is called by Vercel Cron every 12 hours
@@ -16,17 +161,17 @@ export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
   
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  // CRITICAL: Cron secret must be set and match
+  if (!cronSecret) {
+    console.error('[SSL Cron] CRON_SECRET environment variable is not set');
+    return Response.json({ error: 'Server configuration error' }, { status: 500 });
+  }
+  
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const now = new Date();
-  const results: Array<{
-    domainId: string;
-    hostname: string;
-    status: string;
-    error?: string;
-  }> = [];
 
   try {
     // Find domains that are active and due for checking
@@ -48,107 +193,12 @@ export async function GET(request: Request) {
       timestamp: now.toISOString(),
     }));
 
-    for (const domain of domainsToCheck) {
-      try {
-        // Perform SSL check
-        const checkResult = await checkSSLCertificate({
-          hostname: domain.hostname,
-          port: domain.port,
-          sniHostname: domain.sniHostname || undefined,
-          timeout: 30000,
-        });
-
-        // Determine check status
-        let checkStatus: SslCheckStatus = 'ok';
-        let daysRemaining: number | null = null;
-
-        if (checkResult.error) {
-          if (checkResult.error.includes('DNS') || checkResult.error.includes('ENOTFOUND')) {
-            checkStatus = 'dns_failed';
-          } else if (checkResult.error.includes('timeout') || checkResult.error.includes('ETIMEDOUT')) {
-            checkStatus = 'timeout';
-          } else {
-            checkStatus = 'handshake_failed';
-          }
-        } else if (checkResult.certificate) {
-          const validTo = new Date(checkResult.certificate.validTo);
-          daysRemaining = Math.floor((validTo.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-          if (daysRemaining < 0) {
-            checkStatus = 'expired';
-          } else if (daysRemaining <= 30) {
-            checkStatus = 'warning';
-          }
-
-          // Check hostname mismatch
-          if (checkResult.certificate.san && checkResult.certificate.san.length > 0) {
-            const hostname = domain.hostname;
-            const san = checkResult.certificate.san;
-            const cn = checkResult.certificate.subjectCN;
-            
-            const hostnameMatch = san.some((s: string) => {
-              if (s.startsWith('*.')) {
-                const domain = s.slice(2);
-                return hostname === domain || hostname.endsWith('.' + domain);
-              }
-              return s === hostname;
-            }) || cn === hostname;
-
-            if (!hostnameMatch) {
-              checkStatus = 'hostname_mismatch';
-            }
-          }
-        }
-
-        // Save result
-        await db.insert(sslCheckResults).values({
-          domainId: domain.id,
-          checkStatus,
-          validFrom: checkResult.certificate?.validFrom ? new Date(checkResult.certificate.validFrom) : null,
-          validTo: checkResult.certificate?.validTo ? new Date(checkResult.certificate.validTo) : null,
-          issuerCn: checkResult.certificate?.issuerCN || null,
-          subjectCn: checkResult.certificate?.subjectCN || null,
-          sanJson: checkResult.certificate?.san ? JSON.stringify(checkResult.certificate.san) : null,
-          daysRemaining,
-          fingerprintSha256: checkResult.certificate?.fingerprint || null,
-          errorMessage: checkResult.error || null,
-          rawJson: checkResult.raw || null,
-        });
-
-        // Update domain with last/next check times
-        const nextCheckAt = new Date(now.getTime() + 12 * 60 * 60 * 1000); // 12 hours
-        await db
-          .update(domains)
-          .set({
-            lastCheckedAt: now,
-            nextCheckAt,
-          })
-          .where(eq(domains.id, domain.id));
-
-        results.push({
-          domainId: domain.id,
-          hostname: domain.hostname,
-          status: checkStatus,
-        });
-
-      } catch (error) {
-        console.error(`[SSL Cron] Error checking ${domain.hostname}:`, error);
-        
-        // Save failure result
-        await db.insert(sslCheckResults).values({
-          domainId: domain.id,
-          checkStatus: 'handshake_failed',
-          errorMessage: error instanceof Error ? error.message : 'Unknown error',
-        });
-
-        results.push({
-          domainId: domain.id,
-          hostname: domain.hostname,
-          status: 'error',
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
-      }
-    }
+    // Process domains in parallel with concurrency limit
+    const results = await processWithConcurrencyLimit(
+      domainsToCheck,
+      CONCURRENCY_LIMIT,
+      (domain) => checkSingleDomain(domain, now)
+    );
 
     // Create notifications for SSL expiry alerts
     const notificationResult = await createSSLExpiryNotifications();

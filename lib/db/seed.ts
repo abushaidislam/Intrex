@@ -4,6 +4,10 @@ import { eq } from 'drizzle-orm';
 import { appRoleEnum, users, tenants } from './schema';
 import { hashPassword } from '@/lib/auth/session';
 import { seedBangladeshData } from './seed-bangladesh';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config({ path: '.env.local' });
 
 async function createStripeProducts() {
   console.log('Creating Stripe products and prices...');
@@ -42,8 +46,28 @@ async function createStripeProducts() {
 }
 
 async function seed() {
-  const email = 'test@test.com';
-  const password = 'admin123';
+  // SECURITY: Require environment variables for seed credentials
+  // Never hardcode credentials - this prevents accidental production exposure
+  const email = process.env.SEED_EMAIL;
+  const password = process.env.SEED_PASSWORD;
+  
+  if (!email || !password) {
+    console.error('ERROR: SEED_EMAIL and SEED_PASSWORD environment variables must be set');
+    console.error('Example: SEED_EMAIL=admin@company.com SEED_PASSWORD=your_secure_password npm run db:seed');
+    process.exit(1);
+  }
+  
+  if (process.env.NODE_ENV === 'production') {
+    console.error('ERROR: Seeding is not allowed in production environment');
+    process.exit(1);
+  }
+  
+  // Validate password strength for seed user
+  if (password.length < 12) {
+    console.error('ERROR: SEED_PASSWORD must be at least 12 characters long');
+    process.exit(1);
+  }
+
   const passwordHash = await hashPassword(password);
 
   const [user] = await db
