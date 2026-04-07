@@ -3,6 +3,7 @@ import { db } from './drizzle';
 import { eq } from 'drizzle-orm';
 import { appRoleEnum, users, tenants } from './schema';
 import { hashPassword } from '@/lib/auth/session';
+import { seedBangladeshData } from './seed-bangladesh';
 
 async function createStripeProducts() {
   console.log('Creating Stripe products and prices...');
@@ -71,6 +72,8 @@ async function seed() {
     .where(eq(users.id, user.id));
 
   await createStripeProducts();
+  
+  await seedBangladeshData();
 }
 
 seed()
