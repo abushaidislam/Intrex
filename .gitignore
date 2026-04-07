@@ -1,48 +1,176 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
+# =============================================================================
+# DEPENDENCIES
+# =============================================================================
 /node_modules
 /.pnp
 .pnp.js
+.pnp.cjs
 .yarn/install-state.gz
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.pnpm-store/
+package-lock.json
+yarn.lock
 
-# testing
-/coverage
-
-# next.js
+# =============================================================================
+# BUILD OUTPUTS & DEPLOYMENT
+# =============================================================================
+# Next.js build output
 /.next/
 /out/
 
-# production
+# Production build
 /build
+/dist
 
-# misc
-.DS_Store
-*.pem
+# Vercel deployment
+.vercel
 
-# debug
+# =============================================================================
+# ENVIRONMENT FILES (NEVER COMMIT SECRETS)
+# =============================================================================
+# All env files except example
+.env
+.env.*.local
+.env.development
+.env.test
+.env.production
+
+# Keep example files for documentation
+!.env.example
+!.env.local.example
+
+# =============================================================================
+# DEVELOPMENT & DEBUG
+# =============================================================================
+# Debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.pnpm-debug.log*
 
-# local env files
-.env
+# Local development
+*.local
 
-# Allow .env.local for development setup
-!.env.local
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
 
-# vercel
-.vercel
-
-# typescript
+# TypeScript
 *.tsbuildinfo
 next-env.d.ts
-.vscode
 
-# Docker
+# =============================================================================
+# TESTING & COVERAGE
+# =============================================================================
+/coverage
+.nyc_output
+
+# Playwright test artifacts
+/test-results/
+/playwright-report/
+/playwright/.cache/
+/blob-report/
+
+# =============================================================================
+# DATABASE & DOCKER
+# =============================================================================
+# Local database data
 postgres_data/
+*.db
+*.sqlite
+*.sqlite3
 
-#test web 
-test-results/
-playwright-report/
+# Docker override files
+docker-compose.override.yml
+
+# =============================================================================
+# UPLOADS & TEMPORARY FILES
+# =============================================================================
+# Local file uploads (use Supabase/S3 in production)
+/uploads/
+/public/uploads/
+
+# Temporary files
+/tmp/
+/temp/
+*.tmp
+*.temp
+
+# Logs
+/logs/
+*.log
+
+# =============================================================================
+# CACHE & GENERATED FILES
+# =============================================================================
+# Cache directories
+.cache/
+.parcel-cache/
+.eslintcache
+.prettiercache
+
+# Generated files
+/generated/
+
+# =============================================================================
+# PACKAGE MANAGER ARTIFACTS
+# =============================================================================
+# pnpm workspace (not needed for single repo)
+pnpm-workspace.yaml
+
+# npm
+.npm/
+
+# yarn
+.yarn-integrity
+
+# =============================================================================
+# SECURITY & KEYS
+# =============================================================================
+# Private keys
+*.key
+*.private
+*.pem
+!*.pem.example
+
+# Certificates
+*.crt
+*.cer
+*.der
+
+# SSH
+.ssh/
+
+# =============================================================================
+# MONITORING & REPORTING ARTIFACTS
+# =============================================================================
+# Local test reports
 line/
+/test-output/
+/reports/
+
+# =============================================================================
+# MISCELLANEOUS
+# =============================================================================
+# macOS
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*.pid
+*.seed
+*.pid.lock
