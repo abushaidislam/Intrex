@@ -8,15 +8,28 @@ export async function GET(request: Request) {
   // Verify cron secret to prevent unauthorized access
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
-  
+
   if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  console.log(JSON.stringify({
+    job: 'cron_process_notifications',
+    action: 'start',
+    timestamp: new Date().toISOString(),
+  }));
+
   try {
     const result = await processPendingNotifications();
 
-    console.log(`[Notification Cron] Processed ${result.processed} notifications, sent: ${result.sent}, failed: ${result.failed}`);
+    console.log(JSON.stringify({
+      job: 'cron_process_notifications',
+      action: 'complete',
+      processed: result.processed,
+      sent: result.sent,
+      failed: result.failed,
+      timestamp: new Date().toISOString(),
+    }));
 
     return Response.json({
       success: true,
@@ -27,9 +40,15 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('[Notification Cron] Fatal error:', error);
+    console.error(JSON.stringify({
+      job: 'cron_process_notifications',
+      action: 'error',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    }));
+
     return Response.json(
-      { 
+      {
         error: 'Notification processing failed',
         message: error instanceof Error ? error.message : 'Unknown error',
       },

@@ -1,4 +1,4 @@
-import { db } from '@/lib/db/drizzle';
+import { db, client } from '@/lib/db/drizzle';
 import {
   domains,
   sslCheckResults,
@@ -134,19 +134,13 @@ export async function processPendingNotifications(): Promise<{
   let sent = 0;
   let failed = 0;
 
-  // Get pending notifications that are scheduled for now or earlier
-  const pendingNotifications = await db
-    .select()
-    .from(notificationEvents)
-    .where(
-      and(
-        eq(notificationEvents.status, 'queued'),
-        lte(notificationEvents.scheduledFor, now)
-      )
-    )
-    .limit(50);
+  const workerId = `${process.env.VERCEL_REGION ?? 'local'}:${process.pid}`;
+  const maxAttempts = 8;
+  const lockTimeoutMs = 10 * 60 * 1000;
 
-  for (const notification of pendingNotifications) {
+  while (processed < 50) {
+    const claimed = await claimNextNotificationEvent({ now, workerId, lockTimeoutMs });
+    if (!claimed) break;
     processed++;
 
     try {
@@ -156,50 +150,153 @@ export async function processPendingNotifications(): Promise<{
         .from(sslNotificationRecipients)
         .where(
           and(
-            eq(sslNotificationRecipients.tenantId, notification.tenantId),
+            eq(sslNotificationRecipients.tenantId, claimed.tenantId),
             eq(sslNotificationRecipients.isActive, true)
           )
         );
 
       if (recipients.length === 0) {
-        // No recipients configured, mark as cancelled
         await db
           .update(notificationEvents)
-          .set({ status: 'cancelled', updatedAt: now })
-          .where(eq(notificationEvents.id, notification.id));
-        console.log(`[Notification] No recipients for tenant ${notification.tenantId}, cancelling notification`);
+          .set({
+            status: 'cancelled',
+            lockedAt: null,
+            lockedBy: null,
+            updatedAt: now,
+          })
+          .where(eq(notificationEvents.id, claimed.id));
+        console.log(`[Notification] No recipients for tenant ${claimed.tenantId}, cancelling notification ${claimed.id}`);
         continue;
       }
 
-      // Send to each recipient
+      let anyFailure = false;
       for (const recipient of recipients) {
-        const success = await sendSSLExpiryEmail(recipient.email, notification);
+        const success = await sendSSLExpiryEmail(recipient.email, claimed);
         if (success) {
           sent++;
         } else {
           failed++;
+          anyFailure = true;
         }
       }
 
-      // Mark notification as sent
-      await db
-        .update(notificationEvents)
-        .set({ status: 'sent', updatedAt: now })
-        .where(eq(notificationEvents.id, notification.id));
-
+      if (anyFailure) {
+        const attemptCount = (claimed.attemptCount ?? 0) + 1;
+        if (attemptCount >= maxAttempts) {
+          await db
+            .update(notificationEvents)
+            .set({
+              status: 'dead_letter',
+              attemptCount,
+              deadLetteredAt: now,
+              lockedAt: null,
+              lockedBy: null,
+              updatedAt: now,
+            })
+            .where(eq(notificationEvents.id, claimed.id));
+        } else {
+          const nextAttemptAt = computeNextAttemptAt({ now, attemptCount });
+          await db
+            .update(notificationEvents)
+            .set({
+              status: 'queued',
+              attemptCount,
+              nextAttemptAt,
+              lockedAt: null,
+              lockedBy: null,
+              updatedAt: now,
+            })
+            .where(eq(notificationEvents.id, claimed.id));
+        }
+      } else {
+        await db
+          .update(notificationEvents)
+          .set({
+            status: 'sent',
+            lockedAt: null,
+            lockedBy: null,
+            updatedAt: now,
+          })
+          .where(eq(notificationEvents.id, claimed.id));
+      }
     } catch (error) {
-      console.error(`[Notification Processor] Error processing ${notification.id}:`, error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`[Notification Processor] Error processing ${claimed.id}:`, error);
       failed++;
-      
-      // Mark as failed
-      await db
-        .update(notificationEvents)
-        .set({ status: 'failed', updatedAt: now })
-        .where(eq(notificationEvents.id, notification.id));
+
+      const attemptCount = (claimed.attemptCount ?? 0) + 1;
+      if (attemptCount >= maxAttempts) {
+        await db
+          .update(notificationEvents)
+          .set({
+            status: 'dead_letter',
+            attemptCount,
+            lastError: message,
+            deadLetteredAt: now,
+            lockedAt: null,
+            lockedBy: null,
+            updatedAt: now,
+          })
+          .where(eq(notificationEvents.id, claimed.id));
+      } else {
+        const nextAttemptAt = computeNextAttemptAt({ now, attemptCount });
+        await db
+          .update(notificationEvents)
+          .set({
+            status: 'queued',
+            attemptCount,
+            nextAttemptAt,
+            lastError: message,
+            lockedAt: null,
+            lockedBy: null,
+            updatedAt: now,
+          })
+          .where(eq(notificationEvents.id, claimed.id));
+      }
     }
   }
 
   return { processed, sent, failed };
+}
+
+async function claimNextNotificationEvent(params: {
+  now: Date;
+  workerId: string;
+  lockTimeoutMs: number;
+}): Promise<NotificationEvent | null> {
+  const { now, workerId, lockTimeoutMs } = params;
+  const lockExpiredBefore = new Date(now.getTime() - lockTimeoutMs);
+
+  const rows = await client<NotificationEvent[]>`
+    WITH candidate AS (
+      SELECT id
+      FROM notification_events
+      WHERE (status = 'queued' OR status = 'failed')
+        AND scheduled_for <= ${now}
+        AND (next_attempt_at IS NULL OR next_attempt_at <= ${now})
+        AND (locked_at IS NULL OR locked_at < ${lockExpiredBefore})
+      ORDER BY scheduled_for ASC
+      FOR UPDATE SKIP LOCKED
+      LIMIT 1
+    )
+    UPDATE notification_events ne
+    SET status = 'processing',
+        locked_at = ${now},
+        locked_by = ${workerId},
+        updated_at = ${now}
+    FROM candidate
+    WHERE ne.id = candidate.id
+    RETURNING ne.*;
+  `;
+
+  return rows[0] ?? null;
+}
+
+function computeNextAttemptAt(params: { now: Date; attemptCount: number }): Date {
+  const { now, attemptCount } = params;
+  const baseSeconds = Math.min(12 * 60 * 60, Math.pow(2, Math.max(0, attemptCount - 1)) * 60);
+  const jitterSeconds = Math.floor(Math.random() * 30);
+  return new Date(now.getTime() + (baseSeconds + jitterSeconds) * 1000);
 }
 
 /**

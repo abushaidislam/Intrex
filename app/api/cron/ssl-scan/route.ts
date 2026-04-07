@@ -41,7 +41,12 @@ export async function GET(request: Request) {
       )
       .limit(50); // Process in batches
 
-    console.log(`[SSL Cron] Found ${domainsToCheck.length} domains to check`);
+    console.log(JSON.stringify({
+      job: 'cron_ssl_scan',
+      action: 'start',
+      domainsFound: domainsToCheck.length,
+      timestamp: now.toISOString(),
+    }));
 
     for (const domain of domainsToCheck) {
       try {
@@ -145,10 +150,17 @@ export async function GET(request: Request) {
       }
     }
 
-    console.log(`[SSL Cron] Completed ${results.length} SSL checks`);
-
     // Create notifications for SSL expiry alerts
     const notificationResult = await createSSLExpiryNotifications();
+
+    console.log(JSON.stringify({
+      job: 'cron_ssl_scan',
+      action: 'complete',
+      checked: results.length,
+      notificationsCreated: notificationResult.created,
+      timestamp: now.toISOString(),
+    }));
+
     console.log(`[SSL Cron] Created ${notificationResult.created} SSL expiry notifications`);
 
     return Response.json({
@@ -160,7 +172,12 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('[SSL Cron] Fatal error:', error);
+    console.error(JSON.stringify({
+      job: 'cron_ssl_scan',
+      action: 'error',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    }));
     return Response.json(
       { 
         error: 'SSL scan failed',

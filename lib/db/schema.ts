@@ -71,10 +71,12 @@ export const notificationEventTypeEnum = pgEnum('notification_event_type', [
 
 export const notificationStatusEnum = pgEnum('notification_status', [
   'queued',
+  'processing',
   'sent',
   'failed',
   'cancelled',
   'acked',
+  'dead_letter',
 ]);
 
 // Tenants (Businesses)
@@ -275,6 +277,12 @@ export const notificationEvents = pgTable('notification_events', {
   fingerprint: varchar('fingerprint', { length: 200 }).notNull().unique(),
   payloadJson: jsonb('payload_json').notNull(),
   scheduledFor: timestamp('scheduled_for').notNull(),
+  attemptCount: integer('attempt_count').notNull().default(0),
+  nextAttemptAt: timestamp('next_attempt_at'),
+  lockedAt: timestamp('locked_at'),
+  lockedBy: varchar('locked_by', { length: 120 }),
+  lastError: text('last_error'),
+  deadLetteredAt: timestamp('dead_lettered_at'),
   status: notificationStatusEnum('status').notNull().default('queued'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),

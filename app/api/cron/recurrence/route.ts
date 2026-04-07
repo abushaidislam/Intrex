@@ -44,8 +44,14 @@ export async function GET(request: Request) {
     return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
 
+  const now = new Date();
+
   try {
-    // Find completed obligations with recurrence rules that need regeneration
+    console.log(JSON.stringify({
+      job: 'cron_recurrence',
+      action: 'start',
+      timestamp: now.toISOString(),
+    }));
     const completedWithRecurrence = await db
       .select({
         instance: obligationInstances,
@@ -127,13 +133,26 @@ export async function GET(request: Request) {
       generated.push(newInstance);
     }
 
+    console.log(JSON.stringify({
+      job: 'cron_recurrence',
+      action: 'complete',
+      processed: completedWithRecurrence.length,
+      generated: generated.length,
+      timestamp: now.toISOString(),
+    }));
+
     return Response.json({
       processed: completedWithRecurrence.length,
       generated: generated.length,
       items: generated,
     });
   } catch (error) {
-    console.error('Recurrence generation error:', error);
+    console.error(JSON.stringify({
+      job: 'cron_recurrence',
+      action: 'error',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    }));
     return Response.json(
       { error: 'Failed to generate recurring obligations' },
       { status: 500 }

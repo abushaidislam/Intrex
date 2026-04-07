@@ -42,5 +42,7 @@ next-env.d.ts
 # Docker
 postgres_data/
 
+#test web 
 test-results/
 playwright-report/
+line/
