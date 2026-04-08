@@ -1,12 +1,14 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useActionState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { CircleIcon, Loader2 } from 'lucide-react';
+import { Loader2, ChevronLeft, Mail, Lock, Shield, ArrowRight } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { signIn, signUp } from './actions';
 import { ActionState } from '@/lib/auth/middleware';
 
@@ -21,122 +23,270 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   );
 
   return (
-    <div className="min-h-[100dvh] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center">
-          <CircleIcon className="h-12 w-12 text-orange-500" />
+    <main className="relative md:h-screen md:overflow-hidden lg:grid lg:grid-cols-2 bg-background">
+      {/* Left Side - Branding & Animation */}
+      <div className="bg-muted/60 relative hidden h-full flex-col border-r p-10 lg:flex">
+        <div className="from-background absolute inset-0 z-10 bg-gradient-to-t to-transparent" />
+        
+        {/* Logo */}
+        <div className="z-10 flex items-center gap-3">
+          <div className="bg-black rounded-xl px-4 py-3">
+            <Image
+              src="/logo.svg"
+              alt="Ontrex"
+              width={120}
+              height={40}
+              className="h-8 w-auto brightness-0 invert"
+            />
+          </div>
         </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          {mode === 'signin'
-            ? 'Sign in to your account'
-            : 'Create your account'}
-        </h2>
+
+        {/* Testimonial */}
+        <div className="z-10 mt-auto">
+          <blockquote className="space-y-3">
+            <p className="text-xl text-foreground leading-relaxed">
+              &ldquo;Ontrex has streamlined our compliance workflow, saving us countless hours and ensuring we never miss critical deadlines.&rdquo;
+            </p>
+            <footer className="font-mono text-sm font-semibold text-muted-foreground">
+              ~ Compliance Team Lead
+            </footer>
+          </blockquote>
+        </div>
+
+        {/* Animated Background */}
+        <div className="absolute inset-0">
+          <FloatingPaths position={1} />
+          <FloatingPaths position={-1} />
+        </div>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <form className="space-y-6" action={formAction}>
-          <input type="hidden" name="redirect" value={redirect || ''} />
-          <input type="hidden" name="priceId" value={priceId || ''} />
-          <input type="hidden" name="inviteId" value={inviteId || ''} />
-          <div>
-            <Label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Email
-            </Label>
-            <div className="mt-1">
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                defaultValue={state.email}
-                required
-                maxLength={50}
-                className="appearance-none rounded-full relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-orange-500 focus:border-orange-500 focus:z-10 sm:text-sm"
-                placeholder="Enter your email"
+      {/* Right Side - Form */}
+      <div className="relative flex min-h-screen flex-col justify-center p-4">
+        {/* Background Gradients */}
+        <div
+          aria-hidden
+          className="absolute inset-0 isolate contain-strict -z-10 opacity-60"
+        >
+          <div className="bg-[radial-gradient(68.54%_68.72%_at_55.02%_31.46%,--theme(--color-foreground/.06)_0,hsla(0,0%,55%,.02)_50%,--theme(--color-foreground/.01)_80%)] absolute top-0 right-0 h-[320px] w-[140px] -translate-y-[87.5%] rounded-full" />
+          <div className="bg-[radial-gradient(50%_50%_at_50%_50%,--theme(--color-foreground/.04)_0,--theme(--color-foreground/.01)_80%,transparent_100%)] absolute top-0 right-0 h-[320px] w-[60px] [translate:5%_-50%] rounded-full" />
+          <div className="bg-[radial-gradient(50%_50%_at_50%_50%,--theme(--color-foreground/.04)_0,--theme(--color-foreground/.01)_80%,transparent_100%)] absolute top-0 right-0 h-[320px] w-[60px] -translate-y-[87.5%] rounded-full" />
+        </div>
+
+        {/* Back Button */}
+        <Button variant="ghost" className="absolute top-7 left-5 w-fit" asChild>
+          <Link href="/">
+            <ChevronLeft className="size-4 mr-2" />
+            Home
+          </Link>
+        </Button>
+
+        {/* Form Container */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mx-auto w-full max-w-sm space-y-6"
+        >
+          {/* Mobile Logo */}
+          <div className="flex items-center gap-3 lg:hidden">
+            <div className="bg-black rounded-xl px-3 py-2">
+              <Image
+                src="/logo.svg"
+                alt="Ontrex"
+                width={100}
+                height={32}
+                className="h-6 w-auto brightness-0 invert"
               />
             </div>
           </div>
 
-          <div>
-            <Label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Password
-            </Label>
-            <div className="mt-1">
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete={
-                  mode === 'signin' ? 'current-password' : 'new-password'
-                }
-                defaultValue={state.password}
-                required
-                minLength={8}
-                maxLength={100}
-                className="appearance-none rounded-full relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-orange-500 focus:border-orange-500 focus:z-10 sm:text-sm"
-                placeholder="Enter your password"
-              />
+          {/* Header */}
+          <div className="flex flex-col space-y-2 text-center">
+            <div className="mx-auto w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-2">
+              <Shield className="w-6 h-6 text-primary" />
             </div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              {mode === 'signin' ? 'Welcome back' : 'Create your account'}
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              {mode === 'signin'
+                ? 'Enter your credentials to access your account'
+                : 'Start your compliance journey with us'}
+            </p>
           </div>
 
-          {state?.error && (
-            <div className="text-red-500 text-sm">{state.error}</div>
-          )}
+          {/* Form */}
+          <form className="space-y-4" action={formAction}>
+            <input type="hidden" name="redirect" value={redirect || ''} />
+            <input type="hidden" name="priceId" value={priceId || ''} />
+            <input type="hidden" name="inviteId" value={inviteId || ''} />
 
-          <div>
+            {/* Email Field */}
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm font-medium">
+                Email
+              </Label>
+              <div className="relative">
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  defaultValue={state.email}
+                  required
+                  maxLength={50}
+                  placeholder="name@company.com"
+                  className="h-11 pl-10"
+                />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              </div>
+            </div>
+
+            {/* Password Field */}
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-sm font-medium">
+                Password
+              </Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                  defaultValue={state.password}
+                  required
+                  minLength={8}
+                  maxLength={100}
+                  placeholder="Enter your password"
+                  className="h-11 pl-10"
+                />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              </div>
+            </div>
+
+            {/* Error Message */}
+            {state?.error && (
+              <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
+                {state.error}
+              </div>
+            )}
+
+            {/* Submit Button */}
             <Button
               type="submit"
-              className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+              size="lg"
+              className="w-full h-11"
               disabled={pending}
             >
               {pending ? (
                 <>
                   <Loader2 className="animate-spin mr-2 h-4 w-4" />
-                  Loading...
+                  Please wait...
                 </>
               ) : mode === 'signin' ? (
-                'Sign in'
+                <>
+                  Sign in
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
               ) : (
-                'Sign up'
+                <>
+                  Create account
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
               )}
             </Button>
-          </div>
-        </form>
+          </form>
 
-        <div className="mt-6">
+          {/* Divider */}
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300" />
+              <div className="w-full border-t border-border" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-gray-50 text-gray-500">
-                {mode === 'signin'
-                  ? 'New to our platform?'
-                  : 'Already have an account?'}
+              <span className="px-2 bg-background text-muted-foreground text-xs">
+                {mode === 'signin' ? 'New to Ontrex?' : 'Already have an account?'}
               </span>
             </div>
           </div>
 
-          <div className="mt-6">
+          {/* Secondary Action */}
+          <Button
+            variant="outline"
+            size="lg"
+            className="w-full h-11"
+            asChild
+          >
             <Link
               href={`${mode === 'signin' ? '/sign-up' : '/sign-in'}${
                 redirect ? `?redirect=${redirect}` : ''
               }${priceId ? `&priceId=${priceId}` : ''}`}
-              className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-full shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
             >
               {mode === 'signin'
                 ? 'Create an account'
                 : 'Sign in to existing account'}
             </Link>
-          </div>
-        </div>
+          </Button>
+
+          {/* Footer */}
+          <p className="text-center text-sm text-muted-foreground">
+            By continuing, you agree to our{' '}
+            <Link href="#" className="text-primary hover:underline font-medium">
+              Terms
+            </Link>{' '}
+            and{' '}
+            <Link href="#" className="text-primary hover:underline font-medium">
+              Privacy Policy
+            </Link>
+          </p>
+        </motion.div>
       </div>
+    </main>
+  );
+}
+
+// Animated Background Component
+function FloatingPaths({ position }: { position: number }) {
+  const paths = Array.from({ length: 36 }, (_, i) => ({
+    id: i,
+    d: `M-${380 - i * 5 * position} -${189 + i * 6}C-${
+      380 - i * 5 * position
+    } -${189 + i * 6} -${312 - i * 5 * position} ${216 - i * 6} ${
+      152 - i * 5 * position
+    } ${343 - i * 6}C${616 - i * 5 * position} ${470 - i * 6} ${
+      684 - i * 5 * position
+    } ${875 - i * 6} ${684 - i * 5 * position} ${875 - i * 6}`,
+    width: 0.5 + i * 0.03,
+  }));
+
+  return (
+    <div className="pointer-events-none absolute inset-0">
+      <svg
+        className="h-full w-full text-foreground/20"
+        viewBox="0 0 696 316"
+        fill="none"
+      >
+        <title>Background Paths</title>
+        {paths.map((path) => (
+          <motion.path
+            key={path.id}
+            d={path.d}
+            stroke="currentColor"
+            strokeWidth={path.width}
+            strokeOpacity={0.1 + path.id * 0.03}
+            initial={{ pathLength: 0.3, opacity: 0.6 }}
+            animate={{
+              pathLength: 1,
+              opacity: [0.3, 0.6, 0.3],
+              pathOffset: [0, 1, 0],
+            }}
+            transition={{
+              duration: 20 + Math.random() * 10,
+              repeat: Number.POSITIVE_INFINITY,
+              ease: 'linear',
+            }}
+          />
+        ))}
+      </svg>
     </div>
   );
 }
