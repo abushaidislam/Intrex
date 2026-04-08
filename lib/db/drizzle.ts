@@ -17,7 +17,7 @@ declare global {
 
 const globalForDb = globalThis;
 
-export const client = globalForDb.dbClient ?? postgres(process.env.POSTGRES_URL, { max: 10, idle_timeout: 20, connect_timeout: 10 });
+export const client = globalForDb.dbClient ?? postgres(process.env.POSTGRES_URL, { max: 10, idle_timeout: 60, connect_timeout: 10 });
 export const db = globalForDb.db ?? drizzle(client, { schema });
 
 if (process.env.NODE_ENV !== 'production') {
