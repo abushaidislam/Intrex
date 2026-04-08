@@ -110,7 +110,7 @@ export default function RolesGuidePage() {
                 ))}
               </div>
 
-              {'limitations' in role && (
+              {role.limitations && (
                 <>
                   <h3 className="font-semibold text-gray-900 mt-6 mb-4">Limitations</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
