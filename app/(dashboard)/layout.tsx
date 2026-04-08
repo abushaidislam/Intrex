@@ -15,6 +15,8 @@ import { signOut } from '@/app/(login)/actions';
 import { usePathname, useRouter } from 'next/navigation';
 import { User } from '@/lib/db/schema';
 import useSWR, { mutate } from 'swr';
+import { LandingHeader } from '@/components/landing/header';
+import { LandingFooter } from '@/components/landing/footer';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -159,7 +161,20 @@ function Sidebar() {
   );
 }
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+function LayoutContent({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isLandingPage = pathname === '/';
+
+  if (isLandingPage) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <LandingHeader />
+        <main className="flex-1 pt-16">{children}</main>
+        <LandingFooter />
+      </div>
+    );
+  }
+
   return (
     <section className="flex flex-col min-h-screen">
       <Header />
@@ -169,4 +184,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </div>
     </section>
   );
+}
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return <LayoutContent>{children}</LayoutContent>;
 }

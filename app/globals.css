@@ -79,6 +79,53 @@
   body {
     font-family: "Manrope", Arial, Helvetica, sans-serif;
   }
+
+  /* Editorial Heading Styles - Premium Typography */
+  .heading-editorial {
+    font-family: var(--font-heading, "Manrope"), Arial, Helvetica, sans-serif;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    font-weight: 600;
+  }
+
+  .heading-editorial-lg {
+    font-family: var(--font-heading, "Manrope"), Arial, Helvetica, sans-serif;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    font-weight: 700;
+  }
+
+  .heading-editorial-sm {
+    font-family: var(--font-heading, "Manrope"), Arial, Helvetica, sans-serif;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    font-weight: 500;
+  }
+
+  /* Primary Glow Effects */
+  .glow-primary {
+    position: relative;
+  }
+
+  .glow-primary::before {
+    content: '';
+    position: absolute;
+    inset: -20%;
+    background: radial-gradient(ellipse at center, hsl(var(--primary) / 0.15), transparent 70%);
+    filter: blur(60px);
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  .glow-primary-strong::before {
+    background: radial-gradient(ellipse at center, hsl(var(--primary) / 0.25), transparent 70%);
+    filter: blur(80px);
+  }
+
+  .glow-subtle::before {
+    background: radial-gradient(ellipse at center, hsl(var(--primary) / 0.08), transparent 70%);
+    filter: blur(40px);
+  }
 }
 
 @layer base {
@@ -271,5 +318,48 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Border Beam Animation */
+@keyframes border-beam {
+  100% {
+    offset-distance: 100%;
+  }
+}
+
+/* Additional Animations */
+@keyframes shimmer-slide {
+  to {
+    transform: translate(calc(100cqw - 100%), 0);
+  }
+}
+
+@keyframes spin-around {
+  0% {
+    transform: translateZ(0) rotate(0);
+  }
+  15%,
+  35% {
+    transform: translateZ(0) rotate(90deg);
+  }
+  65%,
+  85% {
+    transform: translateZ(0) rotate(270deg);
+  }
+  100% {
+    transform: translateZ(0) rotate(360deg);
+  }
+}
+
+@keyframes shine {
+  0% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  to {
+    background-position: 0% 0%;
   }
 }
