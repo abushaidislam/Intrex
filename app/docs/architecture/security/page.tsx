@@ -228,6 +228,99 @@ Referrer-Policy: strict-origin-when-cross-origin`}</code>
         </div>
       </div>
 
+      {/* Production Hardening */}
+      <div className="space-y-4">
+        <h2 className="text-2xl font-bold text-gray-900">Production Hardening</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="p-5 rounded-xl border border-red-200 bg-red-50">
+            <h3 className="font-semibold text-red-900 mb-3">Database Security</h3>
+            <ul className="space-y-2 text-sm text-red-800">
+              <li>✓ Enable RLS policies on all tables</li>
+              <li>✓ Use connection pooling for serverless</li>
+              <li>✓ Configure backup retention (7+ days)</li>
+              <li>✓ Enable Point-in-Time Recovery (PITR)</li>
+              <li>✓ Restrict database access by IP</li>
+            </ul>
+          </div>
+          <div className="p-5 rounded-xl border border-orange-200 bg-orange-50">
+            <h3 className="font-semibold text-orange-900 mb-3">Application Security</h3>
+            <ul className="space-y-2 text-sm text-orange-800">
+              <li>✓ Use strong AUTH_SECRET (32+ chars)</li>
+              <li>✓ Enable secure cookie settings</li>
+              <li>✓ Configure CORS properly</li>
+              <li>✓ Set up rate limiting</li>
+              <li>✓ Use production SMTP (not test)</li>
+            </ul>
+          </div>
+          <div className="p-5 rounded-xl border border-blue-200 bg-blue-50">
+            <h3 className="font-semibold text-blue-900 mb-3">Infrastructure</h3>
+            <ul className="space-y-2 text-sm text-blue-800">
+              <li>✓ HTTPS with valid SSL certificate</li>
+              <li>✓ HSTS headers enabled</li>
+              <li>✓ Security headers configured</li>
+              <li>✓ Error monitoring (Sentry)</li>
+              <li>✓ Logging to external service</li>
+            </ul>
+          </div>
+          <div className="p-5 rounded-xl border border-green-200 bg-green-50">
+            <h3 className="font-semibold text-green-900 mb-3">Operational</h3>
+            <ul className="space-y-2 text-sm text-green-800">
+              <li>✓ Regular security audits</li>
+              <li>✓ Dependency updates (monthly)</li>
+              <li>✓ Access review (quarterly)</li>
+              <li>✓ Incident response plan</li>
+              <li>✓ Data retention policies</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* Production Checklist */}
+      <div className="bg-gray-900 rounded-xl p-6 text-white">
+        <h3 className="font-semibold mb-4 flex items-center gap-2">
+          <Shield className="w-5 h-5 text-green-400" />
+          Pre-Launch Security Checklist
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div className="space-y-2">
+            <label className="flex items-center gap-2">
+              <input type="checkbox" className="rounded" />
+              <span>All environment variables set correctly</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" className="rounded" />
+              <span>Database RLS policies enabled and tested</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" className="rounded" />
+              <span>SMTP credentials verified working</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" className="rounded" />
+              <span>SSL certificate valid and auto-renews</span>
+            </label>
+          </div>
+          <div className="space-y-2">
+            <label className="flex items-center gap-2">
+              <input type="checkbox" className="rounded" />
+              <span>Error monitoring configured</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" className="rounded" />
+              <span>Database backups enabled</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" className="rounded" />
+              <span>Cron jobs scheduled and tested</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" className="rounded" />
+              <span>Security headers verified</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
       {/* Best Practices */}
       <div className="bg-green-50 border border-green-200 rounded-xl p-6">
         <h3 className="font-semibold text-green-900 mb-4 flex items-center gap-2">
@@ -237,27 +330,27 @@ Referrer-Policy: strict-origin-when-cross-origin`}</code>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-green-800">
           <div>
             <strong>Environment Variables</strong>
-            <p>Never commit .env files. Use strong, unique secrets for production.</p>
+            <p>Never commit .env files. Use strong, unique secrets for production. Rotate secrets regularly.</p>
           </div>
           <div>
             <strong>Regular Updates</strong>
-            <p>Keep dependencies updated. Monitor security advisories.</p>
+            <p>Keep dependencies updated. Monitor security advisories. Enable Dependabot alerts.</p>
           </div>
           <div>
             <strong>Access Review</strong>
-            <p>Audit user roles quarterly. Remove unused accounts.</p>
+            <p>Audit user roles quarterly. Remove unused accounts. Enforce least privilege.</p>
           </div>
           <div>
             <strong>Backup Strategy</strong>
-            <p>Regular database backups. Test restore procedures.</p>
+            <p>Regular database backups. Test restore procedures. Store backups in separate region.</p>
           </div>
           <div>
             <strong>Monitoring</strong>
-            <p>Set up alerts for failed logins, errors, and anomalies.</p>
+            <p>Set up alerts for failed logins, errors, and anomalies. Monitor SSL expiry.</p>
           </div>
           <div>
             <strong>HTTPS Everywhere</strong>
-            <p>Enforce HTTPS in production. Use HSTS headers.</p>
+            <p>Enforce HTTPS in production. Use HSTS headers. Redirect HTTP to HTTPS.</p>
           </div>
         </div>
       </div>

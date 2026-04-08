@@ -49,10 +49,10 @@ pnpm db:seed`,
 ];
 
 const nextSteps = [
+  { title: 'Production Deployment', href: '/docs/guides/deployment', description: 'Deploy to Vercel or self-host' },
   { title: 'Create your first branch', href: '/docs/features/branches', description: 'Set up your organization structure' },
   { title: 'Configure connectors', href: '/docs/guides/connectors', description: 'Set up email, Telegram, or WhatsApp' },
   { title: 'Add SSL domains', href: '/docs/features/ssl-monitoring', description: 'Monitor certificate expirations' },
-  { title: 'Set up compliance tracking', href: '/docs/features/obligations', description: 'Create obligation templates' },
 ];
 
 export default function QuickStartPage() {
@@ -66,11 +66,43 @@ export default function QuickStartPage() {
         >
           ← Back to Documentation
         </Link>
-        <h1 className="text-4xl font-bold text-gray-900">Quick Start</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-4xl font-bold text-gray-900">Quick Start</h1>
+          <span className="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full font-medium">
+            5 min setup
+          </span>
+        </div>
         <p className="text-lg text-gray-600">
-          Get up and running with Intrex in under 5 minutes. Follow these steps to set up 
-          your local development environment.
+          Get Intrex running locally for development or evaluation. For production deployment, 
+          see the <Link href="/docs/guides/deployment" className="text-orange-600 hover:underline">Deployment Guide</Link>.
         </p>
+      </div>
+
+      {/* Two Paths */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="p-6 rounded-xl border-2 border-orange-500 bg-orange-50">
+          <h3 className="font-bold text-gray-900 mb-2">Development</h3>
+          <p className="text-sm text-gray-600 mb-4">Local setup for development and testing</p>
+          <ul className="space-y-1 text-sm text-gray-600 mb-4">
+            <li>✓ Local PostgreSQL or Supabase</li>
+            <li>✓ Development SMTP (optional)</li>
+            <li>✓ Hot reload enabled</li>
+          </ul>
+          <span className="text-xs font-medium text-orange-600">Follow steps below →</span>
+        </div>
+        <Link 
+          href="/docs/guides/deployment" 
+          className="p-6 rounded-xl border border-gray-200 bg-white hover:border-orange-300 transition-colors"
+        >
+          <h3 className="font-bold text-gray-900 mb-2">Production</h3>
+          <p className="text-sm text-gray-600 mb-4">Deploy for real-world usage</p>
+          <ul className="space-y-1 text-sm text-gray-600 mb-4">
+            <li>✓ Production Supabase</li>
+            <li>✓ Verified SMTP credentials</li>
+            <li>✓ Vercel or self-hosted</li>
+          </ul>
+          <span className="text-xs font-medium text-orange-600">View deployment guide →</span>
+        </Link>
       </div>
 
       {/* Prerequisites */}
@@ -136,26 +168,50 @@ export default function QuickStartPage() {
           Verify Installation
         </h3>
         <p className="text-green-800 mb-4">
-          Once the dev server is running, you should be able to:
+          Once the dev server is running, verify everything works:
         </p>
-        <ul className="space-y-2 text-green-800">
-          <li className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-green-600 rounded-full" />
-            Access the landing page at http://localhost:3000
-          </li>
-          <li className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-green-600 rounded-full" />
-            Sign up for a new account
-          </li>
-          <li className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-green-600 rounded-full" />
-            Access the dashboard at /dashboard
-          </li>
-          <li className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-green-600 rounded-full" />
-            Create branches and obligations
-          </li>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ul className="space-y-2 text-sm text-green-800">
+            <li className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 bg-green-600 rounded-full" />
+              Landing page loads at localhost:3000
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 bg-green-600 rounded-full" />
+              Sign-up page works
+            </li>
+          </ul>
+          <ul className="space-y-2 text-sm text-green-800">
+            <li className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 bg-green-600 rounded-full" />
+              Can create test branch
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 bg-green-600 rounded-full" />
+              Dashboard loads correctly
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      {/* Production Note */}
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+        <h3 className="font-semibold text-blue-900 mb-2">Ready for Production?</h3>
+        <p className="text-sm text-blue-800 mb-3">
+          This quick start sets up a local development environment. For production deployment:
+        </p>
+        <ul className="space-y-1 text-sm text-blue-800 mb-4">
+          <li>• Use production Supabase project (not local)</li>
+          <li>• Configure verified SMTP credentials</li>
+          <li>• Set up proper environment variables</li>
+          <li>• Enable database backups</li>
         </ul>
+        <Link 
+          href="/docs/guides/deployment"
+          className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
+        >
+          View Production Deployment Guide →
+        </Link>
       </div>
 
       {/* Next Steps */}

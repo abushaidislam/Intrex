@@ -15,16 +15,18 @@ const prerequisites = [
 ];
 
 const envVars = [
-  { name: 'POSTGRES_URL', required: true, description: 'Supabase PostgreSQL connection string', example: 'postgresql://...' },
-  { name: 'AUTH_SECRET', required: true, description: '32+ char random string for JWT', example: 'openssl rand -base64 32' },
-  { name: 'BASE_URL', required: true, description: 'Application base URL', example: 'http://localhost:3000' },
-  { name: 'PLATFORM_SMTP_HOST', required: false, description: 'SMTP server host', example: 'smtp.gmail.com' },
-  { name: 'PLATFORM_SMTP_PORT', required: false, description: 'SMTP port', example: '587' },
-  { name: 'PLATFORM_SMTP_USER', required: false, description: 'SMTP username', example: 'noreply@example.com' },
-  { name: 'PLATFORM_SMTP_PASS', required: false, description: 'SMTP password or app password', example: '****' },
-  { name: 'PLATFORM_EMAIL_FROM', required: false, description: 'Default sender address', example: '"Intrex" <noreply@example.com>' },
-  { name: 'STRIPE_SECRET_KEY', required: false, description: 'Stripe secret (for billing)', example: 'sk_test_...' },
-  { name: 'STRIPE_WEBHOOK_SECRET', required: false, description: 'Stripe webhook secret', example: 'whsec_...' },
+  { name: 'POSTGRES_URL', required: true, description: 'Supabase PostgreSQL connection string (use connection pooler)', example: 'postgresql://...' },
+  { name: 'AUTH_SECRET', required: true, description: '32+ char random string for JWT signing (HS256)', example: 'openssl rand -base64 32' },
+  { name: 'BASE_URL', required: true, description: 'Application base URL (no trailing slash)', example: 'https://app.yourdomain.com' },
+  { name: 'PLATFORM_SMTP_HOST', required: true, description: 'SMTP server host for transactional emails', example: 'smtp.gmail.com' },
+  { name: 'PLATFORM_SMTP_PORT', required: true, description: 'SMTP port (587 for TLS, 465 for SSL)', example: '587' },
+  { name: 'PLATFORM_SMTP_USER', required: true, description: 'SMTP username/email address', example: 'noreply@yourdomain.com' },
+  { name: 'PLATFORM_SMTP_PASS', required: true, description: 'SMTP password or app-specific password', example: '****' },
+  { name: 'PLATFORM_EMAIL_FROM', required: true, description: 'Default sender name and email', example: '"Intrex" <noreply@yourdomain.com>' },
+  { name: 'STRIPE_SECRET_KEY', required: false, description: 'Stripe secret key for billing (prod)', example: 'sk_live_...' },
+  { name: 'STRIPE_WEBHOOK_SECRET', required: false, description: 'Stripe webhook endpoint secret', example: 'whsec_...' },
+  { name: 'SENTRY_DSN', required: false, description: 'Sentry DSN for error monitoring', example: 'https://...' },
+  { name: 'LOG_LEVEL', required: false, description: 'Logging level (debug, info, warn, error)', example: 'info' },
 ];
 
 export default function InstallationPage() {
@@ -40,8 +42,22 @@ export default function InstallationPage() {
         </Link>
         <h1 className="text-4xl font-bold text-gray-900">Installation</h1>
         <p className="text-lg text-gray-600">
-          Complete installation guide for setting up Intrex on your local machine or server.
+          Production-ready installation guide for Intrex. Includes environment setup, 
+          database configuration, and deployment preparation.
         </p>
+        
+        {/* Environment Tabs */}
+        <div className="flex gap-2 mt-4">
+          <span className="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full font-medium">
+            Development
+          </span>
+          <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full font-medium">
+            Staging
+          </span>
+          <span className="px-3 py-1 bg-purple-100 text-purple-800 text-sm rounded-full font-medium">
+            Production
+          </span>
+        </div>
       </div>
 
       {/* Prerequisites */}
@@ -166,23 +182,97 @@ pnpm db:seed</code>
         </div>
       </div>
 
+      {/* Production Build */}
+      <div className="space-y-4">
+        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <Shield className="w-6 h-6 text-orange-500" />
+          Production Build
+        </h2>
+        <p className="text-gray-600">
+          For production deployment, build the application first:
+        </p>
+        <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+          <pre className="text-sm text-gray-300 font-mono">
+            <code># Build for production
+pnpm build
+
+# Start production server
+pnpm start
+
+# Or deploy to Vercel (recommended)
+vercel --prod</code>
+          </pre>
+        </div>
+      </div>
+
+      {/* Production Checklist */}
+      <div className="bg-gray-900 rounded-xl p-6 text-white">
+        <h3 className="font-semibold mb-4 flex items-center gap-2">
+          <Shield className="w-5 h-5 text-green-400" />
+          Production Checklist
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ul className="space-y-2 text-sm text-gray-300">
+            <li className="flex items-center gap-2">
+              <input type="checkbox" className="rounded" />
+              Database connection string uses connection pooler
+            </li>
+            <li className="flex items-center gap-2">
+              <input type="checkbox" className="rounded" />
+              AUTH_SECRET is 32+ characters and unique
+            </li>
+            <li className="flex items-center gap-2">
+              <input type="checkbox" className="rounded" />
+              SMTP credentials verified working
+            </li>
+            <li className="flex items-center gap-2">
+              <input type="checkbox" className="rounded" />
+              BASE_URL matches production domain
+            </li>
+          </ul>
+          <ul className="space-y-2 text-sm text-gray-300">
+            <li className="flex items-center gap-2">
+              <input type="checkbox" className="rounded" />
+              RLS policies enabled in Supabase
+            </li>
+            <li className="flex items-center gap-2">
+              <input type="checkbox" className="rounded" />
+              Cron jobs configured in Vercel
+            </li>
+            <li className="flex items-center gap-2">
+              <input type="checkbox" className="rounded" />
+              Error monitoring (Sentry) configured
+            </li>
+            <li className="flex items-center gap-2">
+              <input type="checkbox" className="rounded" />
+              Database backups enabled
+            </li>
+          </ul>
+        </div>
+      </div>
+
       {/* Troubleshooting */}
       <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
         <h3 className="font-semibold text-yellow-900 mb-3 flex items-center gap-2">
           <AlertTriangle className="w-5 h-5" />
-          Common Issues
+          Common Issues & Solutions
         </h3>
-        <div className="space-y-3 text-sm text-yellow-800">
-          <div>
-            <strong>AUTH_SECRET too short:</strong> Must be at least 32 characters. 
-            Generate with: <code className="bg-yellow-100 px-2 py-1 rounded">openssl rand -base64 32</code>
+        <div className="space-y-4 text-sm text-yellow-800">
+          <div className="p-3 bg-white rounded-lg border border-yellow-200">
+            <strong className="block mb-1">AUTH_SECRET too short</strong>
+            <p>Must be at least 32 characters. Generate with: <code className="bg-yellow-100 px-2 py-1 rounded">openssl rand -base64 32</code></p>
           </div>
-          <div>
-            <strong>Database connection failed:</strong> Check POSTGRES_URL format and ensure 
-            IP is allowed in Supabase settings.
+          <div className="p-3 bg-white rounded-lg border border-yellow-200">
+            <strong className="block mb-1">Database connection failed</strong>
+            <p>Check POSTGRES_URL format and ensure IP is allowed in Supabase settings. Use connection pooler for serverless.</p>
           </div>
-          <div>
-            <strong>Migration fails:</strong> Ensure database exists and user has CREATE privileges.
+          <div className="p-3 bg-white rounded-lg border border-yellow-200">
+            <strong className="block mb-1">Migration fails</strong>
+            <p>Ensure database exists and user has CREATE privileges. Check that extensions are enabled.</p>
+          </div>
+          <div className="p-3 bg-white rounded-lg border border-yellow-200">
+            <strong className="block mb-1">Build fails on Vercel</strong>
+            <p>Ensure all environment variables are set in Vercel dashboard. Check that Node.js version is 20+.</p>
           </div>
         </div>
       </div>

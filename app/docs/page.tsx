@@ -58,10 +58,10 @@ const features = [
 ];
 
 const quickLinks = [
-  { title: 'Quick Start', href: '/docs/quickstart', description: 'Get up and running in minutes' },
-  { title: 'API Reference', href: '/docs/architecture/api', description: 'Complete API documentation' },
-  { title: 'Database Schema', href: '/docs/architecture/database', description: 'Entity relationships and tables' },
-  { title: 'Deployment Guide', href: '/docs/guides/deployment', description: 'Deploy to production' },
+  { title: 'Quick Start', href: '/docs/quickstart', description: 'Get up and running in 5 minutes' },
+  { title: 'Installation', href: '/docs/installation', description: 'Production-ready setup guide' },
+  { title: 'API Reference', href: '/docs/architecture/api', description: 'Complete REST API documentation' },
+  { title: 'Deployment', href: '/docs/guides/deployment', description: 'Deploy to Vercel or self-host' },
 ];
 
 export default function DocsHomePage() {
@@ -69,17 +69,36 @@ export default function DocsHomePage() {
     <div className="space-y-12">
       {/* Hero */}
       <div className="text-center space-y-4 pb-8 border-b border-gray-200">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-sm font-medium">
-          <Zap className="w-4 h-4" />
-          v1.0 Documentation
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm font-medium">
+          <Shield className="w-4 h-4" />
+          Production Ready
         </div>
         <h1 className="text-4xl md:text-5xl font-bold text-gray-900">
           Intrex Documentation
         </h1>
         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-          B2B Compliance & SSL Monitoring Platform. Learn how to manage compliance deadlines, 
-          monitor SSL certificates, and automate notifications across your organization.
+          Enterprise-grade B2B Compliance & SSL Monitoring Platform. 
+          Complete documentation for deployment, configuration, and production operations.
         </p>
+      </div>
+
+      {/* Production Features Banner */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="p-4 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200">
+          <Shield className="w-6 h-6 text-blue-600 mb-2" />
+          <h3 className="font-semibold text-blue-900">Enterprise Security</h3>
+          <p className="text-sm text-blue-700">JWT auth, RLS policies, encrypted credentials</p>
+        </div>
+        <div className="p-4 rounded-xl bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200">
+          <Database className="w-6 h-6 text-purple-600 mb-2" />
+          <h3 className="font-semibold text-purple-900">Multi-Tenant</h3>
+          <p className="text-sm text-purple-700">Complete tenant isolation at database level</p>
+        </div>
+        <div className="p-4 rounded-xl bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200">
+          <Globe className="w-6 h-6 text-orange-600 mb-2" />
+          <h3 className="font-semibold text-orange-900">Auto-Scaling</h3>
+          <p className="text-sm text-orange-700">Serverless architecture on Vercel Edge</p>
+        </div>
       </div>
 
       {/* Quick Links */}
@@ -169,11 +188,65 @@ export default function DocsHomePage() {
         </div>
       </div>
 
+      {/* Production Checklist */}
+      <div className="bg-gray-900 rounded-2xl p-8 text-white">
+        <div className="flex items-center gap-3 mb-6">
+          <Shield className="w-6 h-6 text-green-400" />
+          <h2 className="text-2xl font-bold">Production Deployment Checklist</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <ul className="space-y-3 text-sm text-gray-300">
+            <li className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-green-400 rounded-full" />
+              Environment variables configured
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-green-400 rounded-full" />
+              Database migrations applied
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-green-400 rounded-full" />
+              RLS policies enabled
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-green-400 rounded-full" />
+              SSL certificate valid
+            </li>
+          </ul>
+          <ul className="space-y-3 text-sm text-gray-300">
+            <li className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-green-400 rounded-full" />
+              SMTP/email configured
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-green-400 rounded-full" />
+              Cron jobs scheduled
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-green-400 rounded-full" />
+              Monitoring enabled
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-green-400 rounded-full" />
+              Backup strategy in place
+            </li>
+          </ul>
+        </div>
+        <div className="mt-6 pt-6 border-t border-gray-700">
+          <Link 
+            href="/docs/guides/deployment"
+            className="inline-flex items-center gap-2 text-green-400 hover:text-green-300 font-medium"
+          >
+            View Deployment Guide →
+          </Link>
+        </div>
+      </div>
+
       {/* Getting Started CTA */}
       <div className="text-center space-y-4 py-8">
-        <h2 className="text-2xl font-bold text-gray-900">Ready to get started?</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Ready to deploy?</h2>
         <p className="text-gray-600">
-          Follow our quick start guide to set up your compliance monitoring in minutes.
+          Choose your path: quick local setup or production deployment.
         </p>
         <div className="flex items-center justify-center gap-4">
           <Link
@@ -187,7 +260,7 @@ export default function DocsHomePage() {
             href="/docs/installation"
             className="inline-flex items-center gap-2 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
           >
-            Installation Guide
+            Production Setup
           </Link>
         </div>
       </div>

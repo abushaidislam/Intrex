@@ -53,12 +53,18 @@ const deploymentSteps = [
 ];
 
 const envVars = [
-  { name: 'POSTGRES_URL', importance: 'Critical', description: 'Production database connection' },
-  { name: 'AUTH_SECRET', importance: 'Critical', description: 'JWT signing secret (generate new)' },
-  { name: 'BASE_URL', importance: 'Critical', description: 'Production domain URL' },
-  { name: 'PLATFORM_SMTP_HOST', importance: 'Recommended', description: 'Production SMTP server' },
-  { name: 'PLATFORM_EMAIL_FROM', importance: 'Recommended', description: 'Verified sender address' },
+  { name: 'POSTGRES_URL', importance: 'Critical', description: 'Production database connection (use pooler)' },
+  { name: 'AUTH_SECRET', importance: 'Critical', description: 'JWT signing secret (32+ chars, generate new)' },
+  { name: 'BASE_URL', importance: 'Critical', description: 'Production domain URL (https://...)' },
+  { name: 'PLATFORM_SMTP_HOST', importance: 'Critical', description: 'Production SMTP server' },
+  { name: 'PLATFORM_SMTP_PORT', importance: 'Critical', description: 'SMTP port (587 or 465)' },
+  { name: 'PLATFORM_SMTP_USER', importance: 'Critical', description: 'SMTP username/email' },
+  { name: 'PLATFORM_SMTP_PASS', importance: 'Critical', description: 'SMTP password/app password' },
+  { name: 'PLATFORM_EMAIL_FROM', importance: 'Critical', description: 'Verified sender address' },
+  { name: 'SENTRY_DSN', importance: 'Recommended', description: 'Error monitoring (Sentry)' },
+  { name: 'LOG_LEVEL', importance: 'Recommended', description: 'Logging level (info/warn/error)' },
   { name: 'STRIPE_SECRET_KEY', importance: 'Optional', description: 'If using Stripe billing' },
+  { name: 'STRIPE_WEBHOOK_SECRET', importance: 'Optional', description: 'Stripe webhook secret' },
 ];
 
 export default function DeploymentGuidePage() {
@@ -223,6 +229,113 @@ export default function DeploymentGuidePage() {
         </div>
       </div>
 
+      {/* Database Setup Detail */}
+      <div className="space-y-4">
+        <h2 className="text-2xl font-bold text-gray-900">Database Configuration</h2>
+        <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+          <pre className="text-sm text-gray-300 font-mono">
+            <code>{`# 1. Create production Supabase project
+# Go to https://supabase.com and create new project
+
+# 2. Get connection string (use connection pooler for serverless)
+# Dashboard → Settings → Database → Connection Pooling
+
+# 3. Run migrations
+pnpm db:migrate
+
+# 4. Verify RLS policies are enabled
+# Dashboard → Database → Policies (should show policies for each table)`}</code>
+          </pre>
+        </div>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h4 className="font-semibold text-blue-900 mb-2">Connection Pooling</h4>
+          <p className="text-sm text-blue-800">
+            For serverless deployments, always use the connection pooler URL (port 6543) 
+            instead of direct database connection. This prevents connection exhaustion.
+          </p>
+        </div>
+      </div>
+
+      {/* Vercel Configuration */}
+      <div className="space-y-4">
+        <h2 className="text-2xl font-bold text-gray-900">Vercel Configuration</h2>
+        <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+          <pre className="text-sm text-gray-300 font-mono">
+            <code>{`# vercel.json - Already included in project
+{
+  "crons": [
+    {
+      "path": "/api/cron/ssl-scan",
+      "schedule": "0 */12 * * *"
+    },
+    {
+      "path": "/api/cron/process-notifications",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/retries",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/recurrence",
+      "schedule": "0 2 * * *"
+    }
+  ]
+}`}</code>
+          </pre>
+        </div>
+      </div>
+
+      {/* Post Deployment */}
+      <div className="space-y-4">
+        <h2 className="text-2xl font-bold text-gray-900">Post-Deployment Verification</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-4 rounded-lg border border-gray-200 bg-white">
+            <h4 className="font-semibold text-gray-900 mb-2">Health Checks</h4>
+            <ul className="space-y-1 text-sm text-gray-600">
+              <li>✓ Landing page loads (200 OK)</li>
+              <li>✓ Sign-up page accessible</li>
+              <li>✓ API endpoints responding</li>
+              <li>✓ Database connection working</li>
+            </ul>
+          </div>
+          <div className="p-4 rounded-lg border border-gray-200 bg-white">
+            <h4 className="font-semibold text-gray-900 mb-2">Feature Tests</h4>
+            <ul className="space-y-1 text-sm text-gray-600">
+              <li>✓ Can create admin account</li>
+              <li>✓ Branch creation works</li>
+              <li>✓ Email notifications send</li>
+              <li>✓ SSL monitoring runs</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* Monitoring */}
+      <div className="bg-gray-900 rounded-xl p-6 text-white">
+        <h3 className="font-semibold mb-4">Monitoring & Alerts</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div>
+            <h4 className="text-orange-400 font-medium mb-2">Recommended Tools</h4>
+            <ul className="space-y-1 text-gray-300">
+              <li>• Sentry - Error tracking</li>
+              <li>• UptimeRobot - Availability</li>
+              <li>• Supabase Dashboard - DB health</li>
+              <li>• Vercel Analytics - Performance</li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-orange-400 font-medium mb-2">Key Metrics</h4>
+            <ul className="space-y-1 text-gray-300">
+              <li>• API response times</li>
+              <li>• Database connection pool</li>
+              <li>• Failed notification rate</li>
+              <li>• SSL certificate expiry</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       {/* Troubleshooting */}
       <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
         <h3 className="font-semibold text-yellow-900 mb-3 flex items-center gap-2">
@@ -230,21 +343,25 @@ export default function DeploymentGuidePage() {
           Common Deployment Issues
         </h3>
         <div className="space-y-3 text-sm text-yellow-800">
-          <div>
-            <strong>Build fails:</strong> Check Node.js version (20+ required). 
-            Verify all dependencies are in package.json.
+          <div className="p-3 bg-white rounded-lg border border-yellow-200">
+            <strong className="block mb-1">Build fails on Vercel</strong>
+            <p>Check Node.js version is 20+. Verify all env vars are set in Vercel dashboard.</p>
           </div>
-          <div>
-            <strong>Database connection errors:</strong> Verify POSTGRES_URL format. 
-            Check Supabase IP allowlist includes Vercel IPs.
+          <div className="p-3 bg-white rounded-lg border border-yellow-200">
+            <strong className="block mb-1">Database connection errors</strong>
+            <p>Verify POSTGRES_URL format. Check Supabase IP allowlist includes Vercel IPs (use 0.0.0.0/0 for testing).</p>
           </div>
-          <div>
-            <strong>Cron jobs not running:</strong> Verify vercel.json configuration. 
-            Check Vercel dashboard Cron section.
+          <div className="p-3 bg-white rounded-lg border border-yellow-200">
+            <strong className="block mb-1">Cron jobs not running</strong>
+            <p>Verify vercel.json configuration. Check Vercel dashboard Cron section for job status.</p>
           </div>
-          <div>
-            <strong>Auth issues:</strong> Ensure AUTH_SECRET is set and 32+ characters. 
-            Check cookie settings (secure: true in production).
+          <div className="p-3 bg-white rounded-lg border border-yellow-200">
+            <strong className="block mb-1">Auth/session issues</strong>
+            <p>Ensure AUTH_SECRET is 32+ characters. Check cookie settings (secure: true in production).</p>
+          </div>
+          <div className="p-3 bg-white rounded-lg border border-yellow-200">
+            <strong className="block mb-1">Emails not sending</strong>
+            <p>Verify SMTP credentials. Check SMTP provider settings (Gmail needs app passwords).</p>
           </div>
         </div>
       </div>
