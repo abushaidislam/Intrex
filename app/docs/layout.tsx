@@ -99,9 +99,9 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
           <nav className="space-y-6">
             {sidebarNavItems.map((section) => (
               <div key={section.title}>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 px-3">
+                <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 px-3">
                   {section.title}
-                </h3>
+                </h2>
                 <ul className="space-y-1">
                   {section.items.map((item) => {
                     const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
