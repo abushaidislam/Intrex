@@ -77,7 +77,7 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-const manrope = Manrope({ subsets: ['latin'] });
+const manrope = Manrope({ subsets: ['latin'], display: 'swap' });
 
 export default function RootLayout({
   children
@@ -90,7 +90,7 @@ export default function RootLayout({
       dir="ltr"
       className={`bg-white dark:bg-gray-950 text-black dark:text-white ${manrope.className}`}
     >
-      <body className="min-h-[100dvh] bg-gray-50">
+      <body className="min-h-[100dvh] bg-gray-50" suppressHydrationWarning>
         <SWRConfig
           value={{
             fallback: {
