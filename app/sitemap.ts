@@ -1,7 +1,8 @@
 import type { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.BASE_URL || 'https://intrex.flinkeo.online';
+  // Always use production URL for sitemap (Vercel env may not be available at build time)
+  const baseUrl = 'https://intrex.flinkeo.online';
 
   // Static routes
   const routes: MetadataRoute.Sitemap = [
