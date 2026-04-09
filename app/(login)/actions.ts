@@ -24,6 +24,7 @@ import {
   validatedActionWithUser
 } from '@/lib/auth/middleware';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { createAndSendVerificationCode, verifyCode } from '@/lib/auth/verification';
 
 async function logActivity(
   tenantId: string | null | undefined,
@@ -95,6 +96,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     };
   }
 
+  // Sign in directly - no OTP verification for existing users
   await Promise.all([
     setSession(foundUser),
     logActivity(foundTenant?.id, foundUser.id, ActivityType.SIGN_IN)
@@ -112,11 +114,12 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 const signUpSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
-  inviteId: z.string().optional()
+  inviteId: z.string().optional(),
+  verificationCode: z.string().length(6).optional()
 });
 
 export const signUp = validatedAction(signUpSchema, async (data, formData) => {
-  const { email, password } = data;
+  const { email, password, verificationCode } = data;
 
   // Rate limiting check by email
   const rateLimitKey = `signup:${email.toLowerCase()}`;
@@ -137,12 +140,50 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
 
   if (existingUser.length > 0) {
     return {
-      error: 'Failed to create user. Please try again.',
+      error: 'An account with this email already exists. Please sign in instead.',
       email,
       password
     };
   }
 
+  // Step 1: If no verification code, send OTP first
+  if (!verificationCode) {
+    // Send verification code for signup (userId is null since user doesn't exist yet)
+    const otpResult = await createAndSendVerificationCode(
+      email,
+      null, // No user yet
+      'signup'
+    );
+
+    if (!otpResult.success) {
+      return {
+        error: `Failed to send verification code: ${otpResult.error}`,
+        email,
+        password
+      };
+    }
+
+    return {
+      requiresVerification: true,
+      email,
+      password,
+      message: 'Verification code sent to your email. Please check your inbox.'
+    };
+  }
+
+  // Step 2: Verify the code
+  const verifyResult = await verifyCode(email, verificationCode, 'signup');
+
+  if (!verifyResult.success) {
+    return {
+      error: verifyResult.error || 'Invalid verification code.',
+      requiresVerification: true,
+      email,
+      password
+    };
+  }
+
+  // Step 3: Verification successful - create user and tenant
   const passwordHash = await hashPassword(password);
 
   const newUser: NewUser = {

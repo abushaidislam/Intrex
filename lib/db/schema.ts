@@ -331,6 +331,20 @@ export const sslNotificationRecipients = pgTable('ssl_notification_recipients', 
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
+// Email Verification Codes (for sign-in OTP)
+export const emailVerificationCodes = pgTable('email_verification_codes', {
+  id: serial('id').primaryKey(),
+  email: varchar('email', { length: 255 }).notNull(),
+  code: varchar('code', { length: 6 }).notNull(),
+  purpose: varchar('purpose', { length: 50 }).notNull().default('signin'), // signin, signup, password_reset
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  attempts: integer('attempts').notNull().default(0),
+  maxAttempts: integer('max_attempts').notNull().default(3),
+  expiresAt: timestamp('expires_at').notNull(),
+  usedAt: timestamp('used_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
 // Activity Logs (modified)
 export const activityLogs = pgTable('activity_logs', {
   id: serial('id').primaryKey(),
@@ -506,6 +520,14 @@ export const sslNotificationRecipientsRelations = relations(sslNotificationRecip
   }),
 }));
 
+// Email Verification Codes Relations
+export const emailVerificationCodesRelations = relations(emailVerificationCodes, ({ one }) => ({
+  user: one(users, {
+    fields: [emailVerificationCodes.userId],
+    references: [users.id],
+  }),
+}));
+
 // Types
 export type Tenant = typeof tenants.$inferSelect;
 export type NewTenant = typeof tenants.$inferInsert;
@@ -554,6 +576,9 @@ export type NewActivityLog = typeof activityLogs.$inferInsert;
 
 export type SSLNotificationRecipient = typeof sslNotificationRecipients.$inferSelect;
 export type NewSSLNotificationRecipient = typeof sslNotificationRecipients.$inferInsert;
+
+export type EmailVerificationCode = typeof emailVerificationCodes.$inferSelect;
+export type NewEmailVerificationCode = typeof emailVerificationCodes.$inferInsert;
 
 export enum ActivityType {
   SIGN_UP = 'SIGN_UP',

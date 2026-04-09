@@ -2,12 +2,12 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useActionState } from 'react';
+import { useActionState, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, ChevronLeft, Mail, Lock, Shield, ArrowRight } from 'lucide-react';
+import { Loader2, ChevronLeft, Mail, Lock, Shield, ArrowRight, KeyRound } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { signIn, signUp } from './actions';
 import { ActionState } from '@/lib/auth/middleware';
@@ -17,10 +17,34 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const redirect = searchParams.get('redirect');
   const priceId = searchParams.get('priceId');
   const inviteId = searchParams.get('inviteId');
+  const [showVerification, setShowVerification] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
-    mode === 'signin' ? signIn : signUp,
+    async (prevState, formData) => {
+      const result = await (mode === 'signin' ? signIn : signUp)(prevState, formData) as ActionState;
+
+      // If server returns requiresVerification, show verification UI
+      if (result?.requiresVerification) {
+        setShowVerification(true);
+        setEmail(formData.get('email') as string);
+        setPassword(formData.get('password') as string);
+      }
+
+      return result;
+    },
     { error: '' }
   );
+
+  // Sync showVerification with server state (for page reloads)
+  useEffect(() => {
+    if (state?.requiresVerification) {
+      setShowVerification(true);
+      if (state?.email) setEmail(state.email);
+      if (state?.password) setPassword(state.password);
+    }
+  }, [state]);
 
   return (
     <main className="relative md:h-screen md:overflow-hidden lg:grid lg:grid-cols-2 bg-background">
@@ -132,7 +156,9 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
                   name="email"
                   type="email"
                   autoComplete="email"
-                  defaultValue={state.email}
+                  value={email || state.email || ''}
+                  onChange={(e) => setEmail(e.target.value)}
+                  readOnly={showVerification}
                   required
                   maxLength={50}
                   placeholder="name@company.com"
@@ -143,7 +169,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
             </div>
 
             {/* Password Field */}
-            <div className="space-y-2">
+            <div className={`space-y-2 ${showVerification ? 'hidden' : ''}`}>
               <Label htmlFor="password" className="text-sm font-medium">
                 Password
               </Label>
@@ -153,8 +179,9 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
                   name="password"
                   type="password"
                   autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-                  defaultValue={state.password}
-                  required
+                  value={password || state.password || ''}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required={!showVerification}
                   minLength={8}
                   maxLength={100}
                   placeholder="Enter your password"
@@ -163,6 +190,56 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
               </div>
             </div>
+
+            {/* Hidden fields to maintain values during verification */}
+            {showVerification && (
+              <>
+                <input type="hidden" name="email" value={email} />
+                <input type="hidden" name="password" value={password} />
+              </>
+            )}
+
+            {/* Verification Code Field - Only shown when verification is required */}
+            {showVerification && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="space-y-2"
+              >
+                <Label htmlFor="verificationCode" className="text-sm font-medium">
+                  Verification Code
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="verificationCode"
+                    name="verificationCode"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]{6}"
+                    maxLength={6}
+                    placeholder="Enter 6-digit code"
+                    className="h-11 pl-10 text-center text-lg tracking-widest"
+                    autoFocus
+                    required={showVerification}
+                  />
+                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  We sent a 6-digit code to your email. Check your inbox.
+                </p>
+              </motion.div>
+            )}
+
+            {/* Success Message */}
+            {state?.message && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-700"
+              >
+                {state.message}
+              </motion.div>
+            )}
 
             {/* Error Message */}
             {state?.error && (
@@ -183,6 +260,11 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
                   <Loader2 className="animate-spin mr-2 h-4 w-4" />
                   Please wait...
                 </>
+              ) : showVerification ? (
+                <>
+                  {mode === 'signin' ? 'Verify & Sign in' : 'Verify & Create account'}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
               ) : mode === 'signin' ? (
                 <>
                   Sign in
@@ -195,6 +277,24 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
                 </>
               )}
             </Button>
+
+            {/* Back Button - Only shown during verification */}
+            {showVerification && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full"
+                onClick={() => {
+                  setShowVerification(false);
+                  setEmail('');
+                  setPassword('');
+                }}
+              >
+                <ChevronLeft className="size-4 mr-1" />
+                Back to sign in
+              </Button>
+            )}
           </form>
 
           {/* Divider */}

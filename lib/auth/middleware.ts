@@ -6,6 +6,10 @@ import { redirect } from 'next/navigation';
 export type ActionState = {
   error?: string;
   success?: string;
+  message?: string;
+  requiresVerification?: boolean;
+  email?: string;
+  password?: string;
   [key: string]: any; // This allows for additional properties
 };
 
