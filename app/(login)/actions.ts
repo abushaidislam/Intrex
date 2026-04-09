@@ -202,9 +202,10 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     };
   }
 
-  // Create a new tenant for this user
+  // Create a new tenant for this user with unique name
+  const timestamp = Date.now().toString().slice(-4);
   const newTenant: NewTenant = {
-    name: `${email}'s Organization`
+    name: `${email}'s Organization ${timestamp}`
   };
 
   const [createdTenant] = await db.insert(tenants).values(newTenant).returning();
