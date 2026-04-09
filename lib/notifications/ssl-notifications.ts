@@ -281,23 +281,26 @@ async function claimNextNotificationEvent(params: {
   const { now, workerId, lockTimeoutMs } = params;
   const lockExpiredBefore = new Date(now.getTime() - lockTimeoutMs);
 
+  const nowIso = now.toISOString();
+  const lockExpiredIso = lockExpiredBefore.toISOString();
+
   const rows = await client<NotificationEvent[]>`
     WITH candidate AS (
       SELECT id
       FROM notification_events
       WHERE (status = 'queued' OR status = 'failed')
-        AND scheduled_for <= ${now}
-        AND (next_attempt_at IS NULL OR next_attempt_at <= ${now})
-        AND (locked_at IS NULL OR locked_at < ${lockExpiredBefore})
+        AND scheduled_for <= ${nowIso}
+        AND (next_attempt_at IS NULL OR next_attempt_at <= ${nowIso})
+        AND (locked_at IS NULL OR locked_at < ${lockExpiredIso})
       ORDER BY scheduled_for ASC
       FOR UPDATE SKIP LOCKED
       LIMIT 1
     )
     UPDATE notification_events ne
     SET status = 'processing',
-        locked_at = ${now},
+        locked_at = ${nowIso},
         locked_by = ${workerId},
-        updated_at = ${now}
+        updated_at = ${nowIso}
     FROM candidate
     WHERE ne.id = candidate.id
     RETURNING ne.*;
