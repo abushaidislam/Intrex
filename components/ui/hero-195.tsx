@@ -3,8 +3,14 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { BorderBeam } from "@/components/ui/border-beam";
-import { DashboardPreview } from "@/components/landing/dashboard-preview";
 import { ArrowRight, Zap } from "lucide-react";
+import dynamic from "next/dynamic";
+
+// Lazy load DashboardPreview for LCP optimization
+const DashboardPreview = dynamic(() => import("@/components/landing/dashboard-preview").then(mod => ({ default: mod.DashboardPreview })), {
+  ssr: true,
+  loading: () => <div className="w-full h-[300px] bg-muted/30 rounded-xl" />
+});
 
 interface Hero195Props {
   className?: string;
@@ -12,24 +18,25 @@ interface Hero195Props {
 
 const Hero195 = React.forwardRef<HTMLDivElement, Hero195Props>(
   ({ className }, ref) => {
+    // Optimized variants for better LCP - content visible immediately
     const containerVariants = {
-      hidden: { opacity: 0 },
+      hidden: { opacity: 1 },
       visible: {
         opacity: 1,
         transition: {
-          staggerChildren: 0.1,
-          delayChildren: 0.2,
+          staggerChildren: 0.05,
+          delayChildren: 0,
         },
       },
     };
 
     const itemVariants = {
-      hidden: { opacity: 0, y: 30 },
+      hidden: { opacity: 1, y: 0 },
       visible: {
         opacity: 1,
         y: 0,
         transition: {
-          duration: 0.6,
+          duration: 0.3,
           ease: "easeOut" as const,
         },
       },
@@ -49,10 +56,7 @@ const Hero195 = React.forwardRef<HTMLDivElement, Hero195Props>(
         {/* Glow effect */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-primary/5 rounded-full blur-3xl pointer-events-none" />
 
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
+        <div
           className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
         >
           <div className="flex flex-col items-center">
@@ -127,7 +131,7 @@ const Hero195 = React.forwardRef<HTMLDivElement, Hero195Props>(
               <DashboardPreview />
             </motion.div>
           </div>
-        </motion.div>
+        </div>
       </section>
     );
   }
