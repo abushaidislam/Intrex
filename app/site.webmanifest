@@ -1,0 +1,36 @@
+{
+  "name": "Intrex - B2B Compliance & SSL Monitoring Platform",
+  "short_name": "Intrex",
+  "description": "Multi-tenant SaaS platform for B2B compliance management and SSL certificate monitoring",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#667eea",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
+  ],
+  "categories": ["business", "productivity", "security"],
+  "screenshots": [
+    {
+      "src": "/og-image.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Dashboard Overview"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}

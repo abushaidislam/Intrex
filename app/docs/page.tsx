@@ -12,11 +12,14 @@ import {
   Route
 } from 'lucide-react';
 import Link from 'next/link';
+import { createPageMetadata } from '@/components/seo/metadata-helper';
 
-export const metadata: Metadata = {
-  title: 'Intrex Documentation - Introduction',
-  description: 'Complete documentation for Intrex - B2B Compliance & SSL Monitoring Platform',
-};
+export const metadata: Metadata = createPageMetadata({
+  title: 'Documentation | Intrex',
+  description: 'Enterprise-grade B2B Compliance & SSL Monitoring Platform. Complete documentation for deployment, configuration, and production operations.',
+  path: '/docs',
+  keywords: ['docs', 'documentation', 'compliance software', 'SSL monitoring'],
+});
 
 const features = [
   {

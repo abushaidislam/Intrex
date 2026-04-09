@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { createPageMetadata } from '@/components/seo/metadata-helper';
-import { DashboardClientLayout } from './layout-client';
 
 export const metadata: Metadata = createPageMetadata({
   title: 'Intrex - B2B Compliance & SSL Monitoring Platform',
@@ -8,7 +7,3 @@ export const metadata: Metadata = createPageMetadata({
   path: '/',
   keywords: ['compliance', 'SSL monitoring', 'B2B SaaS', 'regulatory deadlines', 'trade license', 'fire safety', 'tax compliance', 'certificate expiry'],
 });
-
-export default function Layout({ children }: { children: React.ReactNode }) {
-  return <DashboardClientLayout>{children}</DashboardClientLayout>;
-}

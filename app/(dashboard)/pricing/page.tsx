@@ -1,7 +1,16 @@
+import { Metadata } from 'next';
 import { checkoutAction } from '@/lib/payments/actions';
 import { Check } from 'lucide-react';
 import { getStripePrices, getStripeProducts } from '@/lib/payments/stripe';
 import { SubmitButton } from './submit-button';
+import { createPageMetadata } from '@/components/seo/metadata-helper';
+
+export const metadata: Metadata = createPageMetadata({
+  title: 'Pricing | Intrex',
+  description: 'Choose the right plan for your compliance management needs. Start with a 7-day free trial.',
+  path: '/pricing',
+  keywords: ['pricing', 'plans', 'subscription', 'compliance software', 'SSL monitoring'],
+});
 
 // Prices are fresh for one hour max
 export const revalidate = 3600;
