@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { BorderBeam } from '@/components/ui/border-beam';
 import { Terminal } from './terminal';
 import { Reveal, StaggerContainer, StaggerItem } from '@/components/motion/reveal';
-import { ArrowRight, Code2, Sparkles, Layers, Shield, Zap, Database } from 'lucide-react';
+import { ArrowRight, Code2, Sparkles, Layers, Shield, Zap, Database, Globe, FileText, Flame } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const features = [
@@ -128,6 +128,86 @@ export default function HomePage() {
               </StaggerItem>
             ))}
           </StaggerContainer>
+        </div>
+      </section>
+
+      {/* Solutions Section */}
+      <section className="py-24 bg-muted/30 relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <Reveal className="text-center mb-16">
+            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
+              <Shield className="w-4 h-4" />
+              Compliance Solutions
+            </span>
+            <h2 className="heading-editorial text-3xl sm:text-4xl lg:text-5xl text-foreground">
+              Specialized Compliance Tools
+            </h2>
+            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+              Purpose-built solutions for specific compliance and monitoring needs
+            </p>
+          </Reveal>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {/* SSL Monitoring */}
+            <Reveal delay={0.1}>
+              <a href="/ssl-monitoring" className="group block">
+                <div className="relative h-full p-6 rounded-2xl bg-card border shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <Globe className="w-6 h-6 text-primary" />
+                  </div>
+                  <h3 className="font-semibold text-lg text-foreground mb-2">
+                    SSL Certificate Monitoring
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Automated SSL monitoring for all your domains. Get instant alerts before expiration.
+                  </p>
+                  <div className="flex items-center text-primary text-sm font-medium">
+                    Learn more <ArrowRight className="ml-1 w-4 h-4" />
+                  </div>
+                </div>
+              </a>
+            </Reveal>
+
+            {/* Trade License */}
+            <Reveal delay={0.2}>
+              <a href="/trade-license" className="group block">
+                <div className="relative h-full p-6 rounded-2xl bg-card border shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+                  <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <FileText className="w-6 h-6 text-orange-600" />
+                  </div>
+                  <h3 className="font-semibold text-lg text-foreground mb-2">
+                    Trade License Compliance
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Track trade licenses, permits, and regulatory deadlines across multiple locations.
+                  </p>
+                  <div className="flex items-center text-orange-600 text-sm font-medium">
+                    Learn more <ArrowRight className="ml-1 w-4 h-4" />
+                  </div>
+                </div>
+              </a>
+            </Reveal>
+
+            {/* Fire Safety */}
+            <Reveal delay={0.3}>
+              <a href="/fire-safety" className="group block">
+                <div className="relative h-full p-6 rounded-2xl bg-card border shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+                  <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <Flame className="w-6 h-6 text-red-600" />
+                  </div>
+                  <h3 className="font-semibold text-lg text-foreground mb-2">
+                    Fire Safety Compliance
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Monitor fire safety certificates, NFPA inspections, and safety audits.
+                  </p>
+                  <div className="flex items-center text-red-600 text-sm font-medium">
+                    Learn more <ArrowRight className="ml-1 w-4 h-4" />
+                  </div>
+                </div>
+              </a>
+            </Reveal>
+          </div>
         </div>
       </section>
 
